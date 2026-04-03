@@ -1,0 +1,12 @@
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+DATABASE_URL=postgresql://postgres:password@localhost:5432/notevault
+JWT_SECRET=replace-with-a-strong-secret
+JWT_EXPIRES_IN=7d
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_BUCKET=notevault-files
+SUPABASE_PUBLIC_BASE_URL=https://your-project.supabase.co/storage/v1/object/public
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
