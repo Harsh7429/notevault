@@ -2,9 +2,13 @@ const createError = require("http-errors");
 
 const { asyncHandler } = require("../utils/async-handler");
 const { requireString, validateEmail } = require("../utils/validators");
+const { getOtpExpiryMinutes, isEmailConfigured } = require("../config/env");
+const { createLoginOtpChallenge, generateOtpCode, verifyLoginOtpChallenge } = require("../services/login-otp.service");
+const { sendLoginOtpEmail } = require("../services/mailer.service");
 const {
   createSession,
   createUser,
+  deleteSessionsByUserId,
   deleteSessionByToken,
   findUserByEmail,
   findUserById,
@@ -13,6 +17,19 @@ const {
   updateUserDevice,
   validateLogin
 } = require("../services/auth.service");
+
+function maskEmail(email) {
+  const [name, domain] = String(email || "").split("@");
+
+  if (!name || !domain) {
+    return email;
+  }
+
+  const visible = name.slice(0, 2);
+  const hidden = "*".repeat(Math.max(name.length - visible.length, 1));
+
+  return `${visible}${hidden}@${domain}`;
+}
 
 exports.register = asyncHandler(async (req, res) => {
   const name = requireString(req.body.name);
@@ -30,6 +47,10 @@ exports.register = asyncHandler(async (req, res) => {
 
   if (password.length < 8) {
     throw createError(400, "Password must be at least 8 characters long.");
+  }
+
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+    throw createError(400, "Password must include at least one uppercase letter, one lowercase letter, and one number.");
   }
 
   const existingUser = await findUserByEmail(email);
@@ -71,7 +92,85 @@ exports.login = asyncHandler(async (req, res) => {
     throw createError(400, "Email, password, and deviceId are required.");
   }
 
+  if (!isEmailConfigured()) {
+    throw createError(503, "Login OTP email delivery is not configured yet.");
+  }
+
   const user = await validateLogin({ email, password });
+  const otpCode = generateOtpCode();
+  const challenge = await createLoginOtpChallenge({
+    userId: user.id,
+    email: user.email,
+    deviceId,
+    otpCode
+  });
+
+  await sendLoginOtpEmail({
+    to: user.email,
+    name: user.name,
+    otpCode,
+    expiresInMinutes: getOtpExpiryMinutes(),
+    deviceId
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "OTP sent to your email.",
+    data: {
+      challengeId: challenge.challenge_id,
+      maskedEmail: maskEmail(user.email),
+      expiresInMinutes: getOtpExpiryMinutes()
+    }
+  });
+});
+
+exports.verifyLoginOtp = asyncHandler(async (req, res) => {
+  const challengeId = requireString(req.body.challengeId);
+  const otpCode = requireString(req.body.otpCode);
+  const deviceId = requireString(req.body.deviceId);
+
+  if (!challengeId || !otpCode || !deviceId) {
+    throw createError(400, "challengeId, otpCode, and deviceId are required.");
+  }
+
+  if (!/^\d{6}$/.test(otpCode)) {
+    throw createError(400, "OTP must be a 6-digit code.");
+  }
+
+  const result = await verifyLoginOtpChallenge({
+    challengeId,
+    otpCode,
+    deviceId
+  });
+
+  if (!result.valid) {
+    if (result.reason === "invalid_code") {
+      throw createError(401, `Invalid OTP. ${result.attemptsRemaining} attempt(s) remaining.`);
+    }
+
+    if (result.reason === "device_mismatch") {
+      throw createError(401, "This OTP was requested for a different device.");
+    }
+
+    if (result.reason === "challenge_expired") {
+      throw createError(401, "This OTP has expired. Please log in again.");
+    }
+
+    if (result.reason === "attempts_exhausted") {
+      throw createError(401, "Too many invalid OTP attempts. Please log in again.");
+    }
+
+    throw createError(401, "This login challenge is no longer valid. Please log in again.");
+  }
+
+  const user = await findUserById(result.challenge.user_id);
+
+  if (!user) {
+    throw createError(404, "User not found.");
+  }
+
+  await deleteSessionsByUserId(user.id);
+
   const updatedUser = await updateUserDevice(user.id, deviceId);
   const token = signToken(updatedUser);
 

@@ -1,12 +1,68 @@
 const createError = require("http-errors");
 const crypto = require("crypto");
 
-const { getRazorpayWebhookSecret } = require("../config/env");
+const { getRazorpayWebhookSecret, isEmailConfigured } = require("../config/env");
 const { getRazorpayClient, getRazorpayKeyId } = require("../config/razorpay");
 const { getFileById } = require("../services/files.service");
+const { sendPurchaseReceiptEmail } = require("../services/mailer.service");
 const { createPaymentOrder, findPaymentOrderByOrderId, markPaymentOrderFailed, markPaymentOrderPaid } = require("../services/payment-orders.service");
-const { createPurchase, findPurchaseByUserAndFile, getPurchasesByUser } = require("../services/purchases.service");
+const {
+  createPurchase,
+  findPurchaseByUserAndFile,
+  getPurchaseReceiptDetails,
+  getPurchasesByUser,
+  reservePurchaseReceiptEmail,
+  resetPurchaseReceiptEmailReservation
+} = require("../services/purchases.service");
 const { asyncHandler } = require("../utils/async-handler");
+
+async function sendPurchaseReceiptIfNeeded(purchase) {
+  if (!purchase?.id) {
+    return;
+  }
+
+  if (!isEmailConfigured()) {
+    return;
+  }
+
+  const reserved = await reservePurchaseReceiptEmail(purchase.id);
+
+  if (!reserved) {
+    return;
+  }
+
+  try {
+    const receiptDetails = await getPurchaseReceiptDetails(purchase.id);
+
+    if (!receiptDetails) {
+      return;
+    }
+
+    const purchaseDate = new Date(receiptDetails.created_at).toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    await sendPurchaseReceiptEmail({
+      to: receiptDetails.email,
+      customerName: receiptDetails.customer_name,
+      purchaseDate,
+      fileTitle: receiptDetails.title,
+      amount: receiptDetails.price,
+      paymentId: receiptDetails.payment_id,
+      orderId: receiptDetails.razorpay_order_id
+    });
+  } catch (error) {
+    await resetPurchaseReceiptEmailReservation(purchase.id);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Failed to send purchase receipt email:", error);
+    }
+  }
+}
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -129,6 +185,8 @@ exports.verifyPayment = asyncHandler(async (req, res) => {
     razorpayOrderId: razorpayOrderId
   });
 
+  await sendPurchaseReceiptIfNeeded(purchase);
+
   res.status(200).json({
     success: true,
     message: "Payment verified successfully.",
@@ -177,12 +235,14 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
       const existingPurchase = await findPurchaseByUserAndFile(paymentOrder.user_id, paymentOrder.file_id);
 
       if (!existingPurchase) {
-        await createPurchase({
+        const createdPurchase = await createPurchase({
           userId: paymentOrder.user_id,
           fileId: paymentOrder.file_id,
           paymentId,
           razorpayOrderId: orderId
         });
+
+        await sendPurchaseReceiptIfNeeded(createdPurchase);
       }
     }
   }

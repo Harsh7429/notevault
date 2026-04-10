@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ export function AuthForm({
   fields,
   values,
   error,
+  message,
   loading,
   submitLabel,
   footerText,
@@ -18,7 +19,8 @@ export function AuthForm({
   onChange,
   onSubmit,
   badge,
-  sideNote
+  sideNote,
+  extraContent
 }) {
   return (
     <Card className="mx-auto w-full max-w-xl rounded-[2.4rem]">
@@ -45,12 +47,15 @@ export function AuthForm({
             </label>
           ))}
 
+          {message ? <div className="rounded-2xl border border-[#5f6f52]/25 bg-[#edf4eb] px-4 py-3 text-sm text-[#486245]">{message}</div> : null}
           {error ? <div className="rounded-2xl border border-[#c98773]/35 bg-[#f6e7e2] px-4 py-3 text-sm text-[#8f4d3c]">{error}</div> : null}
 
           <Button size="lg" className="w-full" type="submit" disabled={loading}>
             {loading ? <LoaderCircle className="mr-2 size-4 animate-spin" /> : null}
             {submitLabel}
           </Button>
+
+          {extraContent}
         </form>
 
         {sideNote ? <div className="rounded-[1.6rem] border border-[#171511]/8 bg-[#f8f2e9] px-4 py-4 text-sm leading-7 text-[#5e574b]">{sideNote}</div> : null}

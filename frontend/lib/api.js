@@ -54,6 +54,15 @@ export async function loginUser(input) {
   return payload.data;
 }
 
+export async function verifyLoginOtp(input) {
+  const payload = await request("/api/login/verify-otp", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+
+  return payload.data;
+}
+
 export async function fetchCurrentUser(token) {
   const payload = await request("/api/me", {
     headers: {

@@ -18,7 +18,7 @@ async function createPurchase({ userId, fileId, paymentId, razorpayOrderId = nul
      ON CONFLICT (user_id, file_id)
      DO UPDATE SET payment_id = EXCLUDED.payment_id,
                    razorpay_order_id = COALESCE(EXCLUDED.razorpay_order_id, purchases.razorpay_order_id)
-     RETURNING id, user_id, file_id, payment_id, razorpay_order_id, created_at`,
+     RETURNING id, user_id, file_id, payment_id, razorpay_order_id, receipt_emailed_at, created_at`,
     [userId, fileId, paymentId, razorpayOrderId]
   );
 
@@ -31,6 +31,7 @@ async function getPurchasesByUser(userId) {
        purchases.id,
        purchases.payment_id,
        purchases.razorpay_order_id,
+       purchases.receipt_emailed_at,
        purchases.created_at,
        files.id AS file_id,
        files.title,
@@ -51,6 +52,49 @@ async function getPurchasesByUser(userId) {
   );
 
   return result.rows;
+}
+
+async function reservePurchaseReceiptEmail(purchaseId) {
+  const result = await query(
+    `UPDATE purchases
+     SET receipt_emailed_at = NOW()
+     WHERE id = $1
+       AND receipt_emailed_at IS NULL
+     RETURNING id`,
+    [purchaseId]
+  );
+
+  return Boolean(result.rows[0]);
+}
+
+async function resetPurchaseReceiptEmailReservation(purchaseId) {
+  await query(
+    `UPDATE purchases
+     SET receipt_emailed_at = NULL
+     WHERE id = $1`,
+    [purchaseId]
+  );
+}
+
+async function getPurchaseReceiptDetails(purchaseId) {
+  const result = await query(
+    `SELECT
+       purchases.id,
+       purchases.payment_id,
+       purchases.razorpay_order_id,
+       purchases.created_at,
+       users.name AS customer_name,
+       users.email,
+       files.title,
+       files.price
+     FROM purchases
+     INNER JOIN users ON users.id = purchases.user_id
+     INNER JOIN files ON files.id = purchases.file_id
+     WHERE purchases.id = $1`,
+    [purchaseId]
+  );
+
+  return result.rows[0] || null;
 }
 
 async function getSalesAnalytics() {
@@ -107,5 +151,8 @@ module.exports = {
   findPurchaseByUserAndFile,
   createPurchase,
   getPurchasesByUser,
+  reservePurchaseReceiptEmail,
+  resetPurchaseReceiptEmailReservation,
+  getPurchaseReceiptDetails,
   getSalesAnalytics
 };

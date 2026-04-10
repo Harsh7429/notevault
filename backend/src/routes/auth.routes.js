@@ -8,6 +8,7 @@ const authRouter = express.Router();
 
 authRouter.post("/register", authLimiter, authController.register);
 authRouter.post("/login", authLimiter, authController.login);
+authRouter.post("/login/verify-otp", authLimiter, authController.verifyLoginOtp);
 authRouter.post("/logout", authenticate, authController.logout);
 authRouter.get("/me", authenticate, authController.getCurrentUser);
 

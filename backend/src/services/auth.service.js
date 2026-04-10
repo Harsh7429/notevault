@@ -90,6 +90,10 @@ async function getSessionByToken(token) {
   return result.rows[0] || null;
 }
 
+async function deleteSessionsByUserId(userId) {
+  await query("DELETE FROM sessions WHERE user_id = $1", [userId]);
+}
+
 async function deleteSessionByToken(token) {
   await query("DELETE FROM sessions WHERE token = $1", [token]);
 }
@@ -130,6 +134,7 @@ module.exports = {
   signToken,
   createSession,
   getSessionByToken,
+  deleteSessionsByUserId,
   deleteSessionByToken,
   updateUserDevice,
   validateLogin

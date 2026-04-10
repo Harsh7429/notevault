@@ -17,8 +17,7 @@ function toPublicFile(file) {
     is_featured: file.is_featured,
     price: file.price,
     thumbnail: file.thumbnail,
-    created_at: file.created_at,
-    file_url: file.file_url
+    created_at: file.created_at
   };
 }
 
