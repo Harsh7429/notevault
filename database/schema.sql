@@ -74,6 +74,20 @@ CREATE TABLE IF NOT EXISTS login_otps (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS registration_otps (
+  id BIGSERIAL PRIMARY KEY,
+  challenge_id UUID NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  password_hash TEXT NOT NULL,
+  device_id VARCHAR(255) NOT NULL,
+  code_hash TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  attempts_remaining INTEGER NOT NULL DEFAULT 5 CHECK (attempts_remaining >= 0),
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 
@@ -99,6 +113,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_login_otps_user_id ON login_otps(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_otps_challenge_id ON login_otps(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_login_otps_expires_at ON login_otps(expires_at DESC);
+CREATE INDEX IF NOT EXISTS idx_registration_otps_email ON registration_otps(email);
+CREATE INDEX IF NOT EXISTS idx_registration_otps_challenge_id ON registration_otps(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_registration_otps_expires_at ON registration_otps(expires_at DESC);
 
 COMMENT ON TABLE users IS 'Stores customer and admin accounts.';
 COMMENT ON TABLE files IS 'Stores premium digital products uploaded by admins.';
@@ -106,5 +123,6 @@ COMMENT ON TABLE purchases IS 'Stores successful purchase records.';
 COMMENT ON TABLE payment_orders IS 'Stores Razorpay order lifecycle records before and after verification.';
 COMMENT ON TABLE sessions IS 'Stores active device-bound login sessions.';
 COMMENT ON TABLE login_otps IS 'Stores short-lived login OTP challenges before a session is issued.';
+COMMENT ON TABLE registration_otps IS 'Stores short-lived registration OTP challenges before a new account is created.';
 
 COMMIT;

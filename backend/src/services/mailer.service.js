@@ -108,6 +108,32 @@ If you did not try to log in, please change your password immediately.`,
   });
 }
 
+async function sendRegistrationOtpEmail({ to, name, otpCode, expiresInMinutes, deviceId }) {
+  const greeting = name ? `Hi ${name},` : "Hi,";
+
+  return sendMail({
+    to,
+    subject: "Verify your NoteVault registration",
+    text: `${greeting}
+
+Your NoteVault registration code is ${otpCode}.
+
+This code expires in ${expiresInMinutes} minutes and is valid only for the current signup attempt on device ${deviceId}.
+
+If you did not try to create a NoteVault account, you can safely ignore this email.`,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#171511">
+        <p>${greeting}</p>
+        <p>Use this code to verify your new <strong>NoteVault</strong> account:</p>
+        <p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:20px 0">${otpCode}</p>
+        <p>This code expires in <strong>${expiresInMinutes} minutes</strong> and is valid only for the current signup attempt.</p>
+        <p style="color:#6b6256">Device reference: ${deviceId}</p>
+        <p>If you did not try to create a NoteVault account, you can safely ignore this email.</p>
+      </div>
+    `
+  });
+}
+
 async function sendPurchaseReceiptEmail({ to, customerName, purchaseDate, fileTitle, amount, paymentId, orderId }) {
   const safeAmount = Number(amount || 0).toFixed(2);
   const greeting = customerName ? `Hi ${customerName},` : "Hi,";
@@ -144,6 +170,7 @@ You can now open the product from your NoteVault library.`,
 }
 
 module.exports = {
+  sendRegistrationOtpEmail,
   sendLoginOtpEmail,
   sendPurchaseReceiptEmail
 };

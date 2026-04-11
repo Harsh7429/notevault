@@ -45,6 +45,15 @@ export async function registerUser(input) {
   return payload.data;
 }
 
+export async function verifyRegistrationOtp(input) {
+  const payload = await request("/api/register/verify-otp", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+
+  return payload.data;
+}
+
 export async function loginUser(input) {
   const payload = await request("/api/login", {
     method: "POST",

@@ -38,14 +38,14 @@ async function findUserById(id) {
   return result.rows[0] || null;
 }
 
-async function createUser({ name, email, password, role = "user", deviceId = null }) {
-  const passwordHash = await bcrypt.hash(password, 12);
+async function createUser({ name, email, password, passwordHash, role = "user", deviceId = null }) {
+  const resolvedPasswordHash = passwordHash || (await bcrypt.hash(password, 12));
 
   const result = await query(
     `INSERT INTO users (name, email, password_hash, role, device_id)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, email, role, device_id, created_at`,
-    [name.trim(), email.toLowerCase(), passwordHash, role, deviceId]
+    [name.trim(), email.toLowerCase(), resolvedPasswordHash, role, deviceId]
   );
 
   return result.rows[0];

@@ -20,6 +20,14 @@ async function cleanupExpiredLoginOtps() {
   );
 }
 
+async function cleanupExpiredRegistrationOtps() {
+  await query(
+    `DELETE FROM registration_otps
+     WHERE expires_at < NOW()
+        OR consumed_at IS NOT NULL`
+  );
+}
+
 async function createLoginOtpChallenge({ userId, email, deviceId, otpCode }) {
   await cleanupExpiredLoginOtps();
   await query("DELETE FROM login_otps WHERE user_id = $1", [userId]);
@@ -67,6 +75,60 @@ async function consumeOtpChallenge(challengeId) {
      SET consumed_at = NOW()
      WHERE challenge_id = $1
      RETURNING id, challenge_id, user_id, email, device_id, code_hash, expires_at, attempts_remaining, consumed_at, created_at`,
+    [challengeId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function createRegistrationOtpChallenge({ name, email, password, deviceId, otpCode }) {
+  await cleanupExpiredRegistrationOtps();
+  await query("DELETE FROM registration_otps WHERE email = $1", [email]);
+
+  const challengeId = generateChallengeId();
+  const codeHash = await bcrypt.hash(otpCode, 10);
+  const passwordHash = await bcrypt.hash(password, 12);
+  const expiresInMinutes = getOtpExpiryMinutes();
+  const attemptsRemaining = getOtpMaxAttempts();
+  const result = await query(
+    `INSERT INTO registration_otps (challenge_id, name, email, password_hash, device_id, code_hash, expires_at, attempts_remaining)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW() + ($7 || ' minutes')::interval, $8)
+     RETURNING id, challenge_id, name, email, password_hash, device_id, expires_at, attempts_remaining, consumed_at, created_at`,
+    [challengeId, name.trim(), email.toLowerCase(), passwordHash, deviceId, codeHash, String(expiresInMinutes), attemptsRemaining]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getRegistrationOtpChallenge(challengeId) {
+  const result = await query(
+    `SELECT id, challenge_id, name, email, password_hash, device_id, code_hash, expires_at, attempts_remaining, consumed_at, created_at
+     FROM registration_otps
+     WHERE challenge_id = $1`,
+    [challengeId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function decrementRegistrationOtpAttempts(challengeId) {
+  const result = await query(
+    `UPDATE registration_otps
+     SET attempts_remaining = GREATEST(attempts_remaining - 1, 0)
+     WHERE challenge_id = $1
+     RETURNING id, challenge_id, name, email, password_hash, device_id, code_hash, expires_at, attempts_remaining, consumed_at, created_at`,
+    [challengeId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function consumeRegistrationOtpChallenge(challengeId) {
+  const result = await query(
+    `UPDATE registration_otps
+     SET consumed_at = NOW()
+     WHERE challenge_id = $1
+     RETURNING id, challenge_id, name, email, password_hash, device_id, code_hash, expires_at, attempts_remaining, consumed_at, created_at`,
     [challengeId]
   );
 
@@ -131,8 +193,68 @@ async function verifyLoginOtpChallenge({ challengeId, otpCode, deviceId }) {
   };
 }
 
+async function verifyRegistrationOtpChallenge({ challengeId, otpCode, deviceId }) {
+  const challenge = await getRegistrationOtpChallenge(challengeId);
+
+  if (!challenge) {
+    return {
+      valid: false,
+      reason: "challenge_missing"
+    };
+  }
+
+  if (challenge.consumed_at) {
+    return {
+      valid: false,
+      reason: "challenge_consumed"
+    };
+  }
+
+  if (new Date(challenge.expires_at).getTime() < Date.now()) {
+    return {
+      valid: false,
+      reason: "challenge_expired"
+    };
+  }
+
+  if (challenge.device_id !== deviceId) {
+    return {
+      valid: false,
+      reason: "device_mismatch"
+    };
+  }
+
+  if (challenge.attempts_remaining <= 0) {
+    return {
+      valid: false,
+      reason: "attempts_exhausted"
+    };
+  }
+
+  const isValid = await bcrypt.compare(otpCode, challenge.code_hash);
+
+  if (!isValid) {
+    const updatedChallenge = await decrementRegistrationOtpAttempts(challengeId);
+
+    return {
+      valid: false,
+      reason: "invalid_code",
+      attemptsRemaining: updatedChallenge?.attempts_remaining ?? 0
+    };
+  }
+
+  await consumeRegistrationOtpChallenge(challengeId);
+
+  return {
+    valid: true,
+    challenge
+  };
+}
+
 module.exports = {
   generateOtpCode,
   createLoginOtpChallenge,
-  verifyLoginOtpChallenge
+  verifyLoginOtpChallenge,
+  createRegistrationOtpChallenge,
+  verifyRegistrationOtpChallenge
 };
