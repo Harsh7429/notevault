@@ -1,6 +1,9 @@
+const dns = require("dns").promises;
+const net = require("net");
 const nodemailer = require("nodemailer");
 
 const {
+  getSmtpForceIpv4,
   getMailFrom,
   getSmtpHost,
   getSmtpPass,
@@ -11,29 +14,64 @@ const {
 } = require("../config/env");
 
 let transporter;
+let transporterPromise;
 
-function getTransporter() {
+async function getTransportOptions() {
+  const host = getSmtpHost();
+  const baseOptions = {
+    host,
+    port: getSmtpPort(),
+    secure: getSmtpSecure(),
+    auth: {
+      user: getSmtpUser(),
+      pass: getSmtpPass()
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    dnsTimeout: 15000
+  };
+
+  if (!getSmtpForceIpv4() || net.isIP(host)) {
+    return baseOptions;
+  }
+
+  try {
+    const ipv4Addresses = await dns.resolve4(host);
+
+    if (ipv4Addresses.length > 0) {
+      return {
+        ...baseOptions,
+        host: ipv4Addresses[0],
+        tls: {
+          servername: host
+        }
+      };
+    }
+  } catch (_error) {
+    // Fall back to the configured hostname if IPv4 resolution is unavailable.
+  }
+
+  return baseOptions;
+}
+
+async function getTransporter() {
   if (!isEmailConfigured()) {
     throw new Error("SMTP email delivery is not configured.");
   }
 
   if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: getSmtpHost(),
-      port: getSmtpPort(),
-      secure: getSmtpSecure(),
-      auth: {
-        user: getSmtpUser(),
-        pass: getSmtpPass()
-      }
-    });
+    if (!transporterPromise) {
+      transporterPromise = getTransportOptions().then((options) => nodemailer.createTransport(options));
+    }
+
+    transporter = await transporterPromise;
   }
 
   return transporter;
 }
 
 async function sendMail({ to, subject, text, html }) {
-  const activeTransporter = getTransporter();
+  const activeTransporter = await getTransporter();
 
   return activeTransporter.sendMail({
     from: getMailFrom(),

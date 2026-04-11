@@ -61,6 +61,16 @@ function getSmtpPass() {
   return process.env.SMTP_PASS || "";
 }
 
+function getSmtpForceIpv4() {
+  const explicit = process.env.SMTP_FORCE_IPV4;
+
+  if (explicit === undefined) {
+    return process.env.NODE_ENV === "production";
+  }
+
+  return String(explicit).toLowerCase() === "true";
+}
+
 function getMailFrom() {
   return process.env.MAIL_FROM || getSmtpUser() || "NoteVault <no-reply@notevault.local>";
 }
@@ -80,6 +90,7 @@ module.exports = {
   getSmtpSecure,
   getSmtpUser,
   getSmtpPass,
+  getSmtpForceIpv4,
   getMailFrom,
   isEmailConfigured
 };
