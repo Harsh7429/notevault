@@ -56,33 +56,56 @@ async function getTransportOptions() {
 
 async function getTransporter() {
   if (!isEmailConfigured()) {
+    console.error("[mailer] ❌ SMTP not configured — SMTP_USER or SMTP_PASS is empty");
     throw new Error("SMTP email delivery is not configured.");
   }
 
   if (!transporter) {
+    console.log("[mailer] Creating SMTP transporter —", {
+      host: getSmtpHost(),
+      port: getSmtpPort(),
+      secure: getSmtpSecure(),
+      user: getSmtpUser(),
+      passLength: getSmtpPass()?.length ?? 0,
+      forceIPv4: getSmtpForceIpv4()
+    });
+
     if (!transporterPromise) {
       transporterPromise = getTransportOptions().then((options) => nodemailer.createTransport(options));
     }
 
     transporter = await transporterPromise;
+    console.log("[mailer] ✅ Transporter created successfully");
   }
 
   return transporter;
 }
 
 async function sendMail({ to, subject, text, html }) {
-  const activeTransporter = await getTransporter();
+  console.log("[mailer] Sending email — to:", to, "| subject:", subject);
 
-  return activeTransporter.sendMail({
-    from: getMailFrom(),
-    to,
-    subject,
-    text,
-    html
-  });
+  try {
+    const activeTransporter = await getTransporter();
+    const info = await activeTransporter.sendMail({
+      from: getMailFrom(),
+      to,
+      subject,
+      text,
+      html
+    });
+
+    console.log("[mailer] ✅ Email sent — messageId:", info.messageId, "| accepted:", info.accepted, "| rejected:", info.rejected);
+    return info;
+  } catch (err) {
+    console.error("[mailer] ❌ Failed to send email to:", to);
+    console.error("[mailer] Error code:", err.code, "| responseCode:", err.responseCode, "| command:", err.command);
+    console.error("[mailer] Message:", err.message);
+    throw err;
+  }
 }
 
 async function sendLoginOtpEmail({ to, name, otpCode, expiresInMinutes, deviceId }) {
+  console.log("[mailer] Preparing login OTP email for:", to);
   const greeting = name ? `Hi ${name},` : "Hi,";
 
   return sendMail({
@@ -109,6 +132,7 @@ If you did not try to log in, please change your password immediately.`,
 }
 
 async function sendRegistrationOtpEmail({ to, name, otpCode, expiresInMinutes, deviceId }) {
+  console.log("[mailer] Preparing registration OTP email for:", to);
   const greeting = name ? `Hi ${name},` : "Hi,";
 
   return sendMail({
