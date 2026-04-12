@@ -1,6 +1,10 @@
 exports.errorHandler = (error, req, res, next) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.error(error);
+  const statusCode = error.statusCode || 500;
+  const message = error.message || "Internal server error";
+
+  if (statusCode >= 500) {
+    console.error("[error]", req.method, req.path, "→", statusCode, message);
+    console.error(error.stack);
   }
 
   if (error.type === "entity.too.large") {
@@ -16,9 +20,6 @@ exports.errorHandler = (error, req, res, next) => {
       message: error.message
     });
   }
-
-  const statusCode = error.statusCode || 500;
-  const message = error.message || "Internal server error";
 
   return res.status(statusCode).json({
     success: false,
