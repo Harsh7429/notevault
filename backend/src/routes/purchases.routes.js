@@ -7,7 +7,7 @@ const { authLimiter, paymentLimiter } = require("../middleware/rate-limit");
 
 const purchasesRouter = express.Router();
 
-purchasesRouter.post("/create-order", paymentLimiter, authenticate, purchasesController.createOrder);
+purchasesRouter.post("/create-order/:fileId", paymentLimiter, authenticate, purchasesController.createOrder);
 purchasesRouter.post("/verify-payment", paymentLimiter, authenticate, purchasesController.verifyPayment);
 purchasesRouter.post("/razorpay/webhook", purchasesController.handleWebhook);
 purchasesRouter.get("/my-purchases", authenticate, purchasesController.getMyPurchases);
