@@ -66,7 +66,8 @@ async function sendPurchaseReceiptIfNeeded(purchase) {
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const fileId = Number(req.body.fileId);
+  // Read fileId from URL param first, fall back to body
+  const fileId = Number(req.params.fileId ?? req.body.fileId);
 
   if (Number.isNaN(fileId) || fileId <= 0) {
     throw createError(400, "A valid fileId is required.");
