@@ -66,10 +66,16 @@ async function sendPurchaseReceiptIfNeeded(purchase) {
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const userEmail = req.user.email;  // ← ADD THIS LINE
   const fileId = Number(req.body.fileId);
 
   if (Number.isNaN(fileId) || fileId <= 0) {
     throw createError(400, "A valid fileId is required.");
+  }
+
+  // ← ADD THESE 3 LINES
+  if (!userEmail) {
+    throw createError(400, "A valid field is required.");
   }
 
   const file = await getFileById(fileId);
