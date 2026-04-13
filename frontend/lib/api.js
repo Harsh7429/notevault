@@ -92,7 +92,7 @@ export async function logoutUser(token) {
 }
 
 export async function createPaymentOrder(token, fileId) {
-  const payload = await request("/api/create-order", {
+  const payload = await request(`/api/create-order/${fileId}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`
