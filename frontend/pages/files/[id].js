@@ -26,8 +26,9 @@ import {
 } from "@/lib/api";
 import { loadRazorpayScript } from "@/lib/payments";
 
-export default function FileDetailPage({ fileId }) {
+export default function FileDetailPage({ fileId: fileIdProp }) {
   const router = useRouter();
+  const fileId = fileIdProp ?? Number(router.query.id);
 
   const [file, setFile] = useState(null);
   const [user, setUser] = useState(null);
