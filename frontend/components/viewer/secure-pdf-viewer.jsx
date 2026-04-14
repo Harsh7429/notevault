@@ -1,41 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Use the correct worker for react-pdf v9 / pdfjs-dist v4
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
-function WatermarkLayer({ email }) {
-  const [timestamp, setTimestamp] = useState(new Date());
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setTimestamp(new Date());
-    }, 30000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const stamps = useMemo(() => Array.from({ length: 12 }, (_, index) => index), []);
-  const label = `${email} | ${timestamp.toLocaleString()}`;
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-20 grid grid-cols-2 gap-10 overflow-hidden p-8 opacity-20 sm:grid-cols-3">
-      {stamps.map((stamp) => (
-        <div
-          key={stamp}
-          className="flex items-center justify-center text-center text-xs font-semibold uppercase tracking-[0.22em] text-white sm:text-sm"
-          style={{ transform: "rotate(-24deg)" }}
-        >
-          {label}
-        </div>
-      ))}
-    </div>
-  );
-}
+// Correct CDN paths for cMaps and standard fonts
+const PDF_OPTIONS = {
+  cMapUrl: "https://unpkg.com/pdfjs-dist@4.4.168/cmaps/",
+  cMapPacked: true,
+  standardFontDataUrl: "https://unpkg.com/pdfjs-dist@4.4.168/standard_fonts/",
+};
 
 export function SecurePdfViewer({ fileUrl, email, onDocumentLoadSuccess, numPages }) {
   const [pageWidth, setPageWidth] = useState(900);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     function updateWidth() {
@@ -66,10 +51,13 @@ export function SecurePdfViewer({ fileUrl, email, onDocumentLoadSuccess, numPage
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function handleLoadError(error) {
+    console.error("PDF load error:", error?.message || error);
+    setLoadError(error?.message || "Failed to load PDF.");
+  }
+
   return (
     <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/80 shadow-glass sm:rounded-[2rem]">
-      <WatermarkLayer email={email} />
-
       {/* Header */}
       <div className="relative z-10 border-b border-white/10 bg-slate-950/90 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -108,21 +96,25 @@ export function SecurePdfViewer({ fileUrl, email, onDocumentLoadSuccess, numPage
         </div>
       </div>
 
-      {/* PDF — only renders the current page, fixes the crash on large PDFs */}
+      {/* PDF */}
       <div className="relative z-10 select-none p-3 sm:p-6">
         <Document
           file={fileUrl}
+          options={PDF_OPTIONS}
           loading={
             <div className="p-10 text-center text-slate-300">Loading secure document...</div>
           }
           error={
-            <div className="p-10 text-center text-rose-300">Unable to render this PDF right now.</div>
+            <div className="p-10 text-center text-rose-300">
+              {loadError || "Unable to render this PDF right now."}
+            </div>
           }
           onLoadSuccess={(payload) => {
+            setLoadError(null);
             onDocumentLoadSuccess(payload);
             setCurrentPage(1);
           }}
-          options={{ cMapUrl: "cmaps/", standardFontDataUrl: "standard_fonts/" }}
+          onLoadError={handleLoadError}
         >
           <div className="overflow-hidden rounded-xl border border-[#d9cba9] bg-white/10 sm:rounded-2xl">
             <Page
@@ -137,7 +129,7 @@ export function SecurePdfViewer({ fileUrl, email, onDocumentLoadSuccess, numPage
         </Document>
       </div>
 
-      {/* Bottom navigation for easy thumb reach on mobile */}
+      {/* Bottom navigation for mobile */}
       {safeNumPages > 1 && (
         <div className="relative z-10 flex items-center justify-between border-t border-white/10 px-4 py-3 sm:hidden">
           <button
