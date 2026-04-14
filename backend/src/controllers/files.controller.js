@@ -1,6 +1,6 @@
 const createError = require("http-errors");
 
-const { downloadFileBuffer } = require("../config/storage");
+const { downloadFileBuffer, createSignedFileUrl } = require("../config/storage");
 const { getFileById: getFileByIdRecord, listFiles } = require("../services/files.service");
 const { asyncHandler } = require("../utils/async-handler");
 
@@ -60,6 +60,14 @@ exports.getSecureFileAccess = asyncHandler(async (req, res) => {
     throw createError(404, "File not found.");
   }
 
+  if (!file.storage_path) {
+    throw createError(500, "File storage path is missing.");
+  }
+
+  // Generate a short-lived signed URL (2 minutes). The PDF loads client-side
+  // directly from Supabase — no backend memory usage, no CORS issues.
+  const signedUrl = await createSignedFileUrl(file.storage_path, 120);
+
   res.status(200).json({
     success: true,
     data: {
@@ -77,8 +85,8 @@ exports.getSecureFileAccess = asyncHandler(async (req, res) => {
         thumbnail: file.thumbnail,
         createdAt: file.created_at
       },
-      viewerUrl: `/api/notes/${file.id}/view`,
-      deliveryMode: "protected-stream"
+      viewerUrl: signedUrl,
+      deliveryMode: "signed-url"
     }
   });
 });
