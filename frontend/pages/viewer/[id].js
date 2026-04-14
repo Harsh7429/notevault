@@ -182,12 +182,7 @@ export default function ViewerPage({ fileId }) {
               </Card>
 
               <SecurePdfViewer
-                fileUrl={{
-                  url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${state.viewerUrl}`,
-                  httpHeaders: {
-                    Authorization: `Bearer ${state.token}`
-                  }
-                }}
+                fileUrl={state.viewerUrl}
                 email={state.email}
                 numPages={state.numPages}
                 onDocumentLoadSuccess={({ numPages }) => {
