@@ -2,6 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import { ArrowLeft, Clock3, ShieldAlert, ShieldCheck, Tags } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -11,11 +12,15 @@ import { clearStoredToken, getStoredToken } from "@/lib/auth";
 import { fetchCurrentUser, fetchSecureViewerAccess } from "@/lib/api";
 
 const SecurePdfViewer = dynamic(
-  () => import("@/components/viewer/secure-pdf-viewer").then((module) => module.SecurePdfViewer),
+  () => import("@/components/viewer/secure-pdf-viewer").then((m) => m.SecurePdfViewer),
   { ssr: false }
 );
 
-export default function ViewerPage({ fileId }) {
+export default function ViewerPage({ fileId: fileIdProp }) {
+  const router = useRouter();
+  // SSR prop on hard load, router.query on client-side nav
+  const fileId = fileIdProp ?? router.query.id;
+
   const [state, setState] = useState({
     loading: true,
     error: "",
@@ -23,14 +28,20 @@ export default function ViewerPage({ fileId }) {
     viewerUrl: "",
     email: "",
     numPages: 0,
-    token: ""
   });
 
   const metaChips = useMemo(() => {
-    return [state.file?.subject, state.file?.course, state.file?.semester, state.file?.unitLabel].filter(Boolean);
+    return [
+      state.file?.subject,
+      state.file?.course,
+      state.file?.semester,
+      state.file?.unitLabel,
+    ].filter(Boolean);
   }, [state.file]);
 
   useEffect(() => {
+    if (!fileId) return;
+
     const token = getStoredToken();
 
     if (!token) {
@@ -38,22 +49,14 @@ export default function ViewerPage({ fileId }) {
       return;
     }
 
-    function blockEvent(event) {
-      event.preventDefault();
-    }
-
-    function blockShortcuts(event) {
-      const key = event.key.toLowerCase();
-      const modifier = event.ctrlKey || event.metaKey;
-
-      if (event.key === "F12" || key === "printscreen") {
-        event.preventDefault();
-      }
-
-      if (modifier && ["p", "s", "u"].includes(key)) {
-        event.preventDefault();
-      }
-    }
+    // Block right-click, drag, print shortcuts
+    const blockEvent = (e) => e.preventDefault();
+    const blockShortcuts = (e) => {
+      const key = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      if (e.key === "F12" || key === "printscreen") e.preventDefault();
+      if (mod && ["p", "s", "u"].includes(key)) e.preventDefault();
+    };
 
     document.addEventListener("contextmenu", blockEvent);
     document.addEventListener("dragstart", blockEvent);
@@ -62,26 +65,23 @@ export default function ViewerPage({ fileId }) {
 
     Promise.all([fetchCurrentUser(token), fetchSecureViewerAccess(token, fileId)])
       .then(([user, access]) => {
-        setState((current) => ({
-          ...current,
+        setState((prev) => ({
+          ...prev,
           loading: false,
           email: user.email,
           viewerUrl: access.viewerUrl,
           file: access.file,
-          token,
-          error: ""
+          error: "",
         }));
       })
-      .catch((error) => {
-        if (error.message.toLowerCase().includes("session") || error.message.toLowerCase().includes("token")) {
+      .catch((err) => {
+        if (
+          err.message?.toLowerCase().includes("session") ||
+          err.message?.toLowerCase().includes("token")
+        ) {
           clearStoredToken();
         }
-
-        setState((current) => ({
-          ...current,
-          loading: false,
-          error: error.message
-        }));
+        setState((prev) => ({ ...prev, loading: false, error: err.message }));
       });
 
     return () => {
@@ -95,23 +95,37 @@ export default function ViewerPage({ fileId }) {
   return (
     <>
       <Head>
-        <title>{state.file ? `${state.file.title} Viewer | NoteVault` : "Secure Viewer | NoteVault"}</title>
+        <title>
+          {state.file ? `${state.file.title} Viewer | NoteVault` : "Secure Viewer | NoteVault"}
+        </title>
       </Head>
       <AppShell>
         <section className="space-y-8 py-8 sm:py-12">
+          {/* Top bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Link href={`/files/${fileId}`} className="inline-flex items-center gap-2 text-sm font-medium text-[#5a5449] transition hover:text-[#171511]">
+            <Link
+              href={`/files/${fileId}`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#5a5449] transition hover:text-[#171511]"
+            >
               <ArrowLeft className="size-4" />
               Back to product
             </Link>
-            <div className="rounded-full border border-[#171511]/10 bg-white px-4 py-2 text-sm text-[#5f6f52]">Secure viewer mode</div>
+            <div className="rounded-full border border-[#171511]/10 bg-white px-4 py-2 text-sm text-[#5f6f52]">
+              Secure viewer mode
+            </div>
           </div>
 
-          {state.loading ? (
+          {/* Loading */}
+          {state.loading && (
             <Card>
-              <CardContent className="p-8 text-[#5a5449]">Preparing your protected viewer...</CardContent>
+              <CardContent className="p-8 text-[#5a5449]">
+                Preparing your protected viewer...
+              </CardContent>
             </Card>
-          ) : state.error ? (
+          )}
+
+          {/* Error */}
+          {!state.loading && state.error && (
             <Card>
               <CardContent className="space-y-4 p-8">
                 <div className="inline-flex rounded-2xl bg-[#f4ebe6] p-3 text-[#b36e58]">
@@ -129,14 +143,22 @@ export default function ViewerPage({ fileId }) {
                 </div>
               </CardContent>
             </Card>
-          ) : (
+          )}
+
+          {/* Viewer */}
+          {!state.loading && !state.error && (
             <div className="space-y-6">
               <Card>
                 <CardContent className="space-y-5 p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h1 className="text-3xl font-semibold text-[#171511]">{state.file?.title}</h1>
-                      <p className="mt-2 max-w-3xl text-[#5a5449]">Protected access granted for {state.email}. This session includes a live watermark and browser-side restrictions.</p>
+                      <h1 className="text-3xl font-semibold text-[#171511]">
+                        {state.file?.title}
+                      </h1>
+                      <p className="mt-2 max-w-3xl text-[#5a5449]">
+                        Protected access granted for {state.email}. This session includes
+                        browser-side restrictions.
+                      </p>
                     </div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#eff4ea] px-4 py-2 text-sm text-[#5f6f52]">
                       <ShieldCheck className="size-4" />
@@ -144,16 +166,23 @@ export default function ViewerPage({ fileId }) {
                     </div>
                   </div>
 
-                  {metaChips.length ? (
+                  {metaChips.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {metaChips.map((chip) => (
-                        <span key={chip} className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">
+                        <span
+                          key={chip}
+                          className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]"
+                        >
                           {chip}
                         </span>
                       ))}
-                      {state.file?.pageCount ? <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">{state.file.pageCount} pages</span> : null}
+                      {state.file?.pageCount ? (
+                        <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">
+                          {state.file.pageCount} pages
+                        </span>
+                      ) : null}
                     </div>
-                  ) : null}
+                  )}
 
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
@@ -161,21 +190,28 @@ export default function ViewerPage({ fileId }) {
                         <Tags className="size-4" />
                         Access
                       </div>
-                      <div className="mt-2 leading-7">Open this document only inside the protected NoteVault viewer.</div>
+                      <div className="mt-2 leading-7">
+                        Open this document only inside the protected NoteVault viewer.
+                      </div>
                     </div>
                     <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
                       <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
                         <Clock3 className="size-4" />
                         Session
                       </div>
-                      <div className="mt-2 leading-7">Viewer requests now flow through a protected backend route with JWT and purchase enforcement.</div>
+                      <div className="mt-2 leading-7">
+                        Viewer requests flow through a protected backend route with JWT and
+                        purchase enforcement.
+                      </div>
                     </div>
                     <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
                       <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
                         <ShieldCheck className="size-4" />
                         Protection
                       </div>
-                      <div className="mt-2 leading-7">Watermarking and blocked shortcuts help reduce casual copying and unauthorized sharing.</div>
+                      <div className="mt-2 leading-7">
+                        Right-click, print and save shortcuts are disabled for this session.
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -186,10 +222,7 @@ export default function ViewerPage({ fileId }) {
                 email={state.email}
                 numPages={state.numPages}
                 onDocumentLoadSuccess={({ numPages }) => {
-                  setState((current) => ({
-                    ...current,
-                    numPages
-                  }));
+                  setState((prev) => ({ ...prev, numPages }));
                 }}
               />
             </div>
@@ -203,7 +236,7 @@ export default function ViewerPage({ fileId }) {
 export async function getServerSideProps(context) {
   return {
     props: {
-      fileId: context.params.id
-    }
+      fileId: context.params.id,
+    },
   };
 }
