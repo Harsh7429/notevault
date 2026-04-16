@@ -72,7 +72,7 @@ export default function HomePage() {
       <main ref={scrollRef} className="min-h-screen bg-[#f6f1e8] text-[#161616]">
         <Navbar scrollYProgress={scrollYProgress} />
 
-        <section className="relative overflow-hidden px-6 pt-32 sm:px-8 lg:px-10 lg:pt-36">
+        <section className="relative overflow-hidden px-4 pt-28 sm:px-8 sm:pt-32 lg:px-10 lg:pt-36">
           <div className="absolute inset-0 soft-grid opacity-60" />
           <div className="home-orb absolute -left-10 top-24 h-52 w-52 rounded-full bg-[#e8dac2]" />
           <div className="home-orb absolute right-0 top-0 h-72 w-72 rounded-full bg-[#dce4d3]" />
@@ -90,7 +90,7 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-6">
-                <h1 className="max-w-4xl font-heading text-5xl leading-[0.98] text-[#171511] sm:text-6xl lg:text-7xl">
+                <h1 className="max-w-4xl font-heading text-4xl leading-[1.05] text-[#171511] sm:text-5xl lg:text-7xl">
                   A cleaner way for students to discover and buy premium notes.
                 </h1>
                 <p className="max-w-2xl text-lg leading-8 text-[#4b463d] sm:text-xl">
@@ -125,9 +125,9 @@ export default function HomePage() {
                 )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 {heroStats.map((item) => (
-                  <div key={item.label} className="market-card rounded-[1.75rem] p-5">
+                  <div key={item.label} className="market-card rounded-[1.5rem] p-3 sm:p-5">
                     <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#7a7368]">{item.label}</div>
                     <div className="mt-3 text-3xl font-semibold text-[#171511]">{item.value}</div>
                   </div>
@@ -184,7 +184,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="px-6 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <section className="px-4 py-10 sm:px-8 sm:py-16 lg:px-10 lg:py-20">
           <div className="mx-auto max-w-7xl">
             <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -197,7 +197,7 @@ export default function HomePage() {
             </div>
 
             {loadingFiles ? (
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <FileCardSkeleton key={index} />
                 ))}
@@ -267,7 +267,7 @@ export default function HomePage() {
           </section>
         ) : null}
 
-        <section className="px-6 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <section className="px-4 py-10 sm:px-8 sm:py-16 lg:px-10 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
             <div className="market-card rounded-[2.2rem] p-8 sm:p-10">
               <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#7a7368]">How it works</div>
@@ -326,7 +326,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="px-6 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <section className="px-4 py-10 sm:px-8 sm:py-16 lg:px-10 lg:py-20">
           <div className="mx-auto max-w-7xl rounded-[2.6rem] bg-[#171511] px-6 py-12 text-[#f9f4ec] sm:px-8 lg:px-12 lg:py-14">
             <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
               <div>
