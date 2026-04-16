@@ -42,7 +42,7 @@ export function AuthForm({
                 value={values[field.name] || ""}
                 onChange={onChange}
                 placeholder={field.placeholder}
-                className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-[#171511] outline-none transition placeholder:text-[#9a9489] focus:border-[#5f6f52]/45 focus:bg-[#fffdf9]"
+                className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-base text-[#171511] outline-none transition placeholder:text-[#9a9489] focus:border-[#5f6f52]/45 focus:bg-[#fffdf9]"
               />
             </label>
           ))}
