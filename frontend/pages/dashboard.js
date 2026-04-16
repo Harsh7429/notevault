@@ -71,7 +71,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7a7368]">{user?.role === "admin" ? "Admin dashboard" : "Student dashboard"}</p>
-              <h1 className="mt-3 font-heading text-4xl text-[#171511] sm:text-5xl">{user?.role === "admin" ? "Manage your catalog from one place" : "Your NoteVault library"}</h1>
+              <h1 className="mt-3 font-heading text-3xl text-[#171511] sm:text-4xl lg:text-5xl">{user?.role === "admin" ? "Manage your catalog from one place" : "Your NoteVault library"}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {user?.role === "admin" ? (
@@ -148,7 +148,7 @@ export default function DashboardPage() {
 
               {user?.role === "admin" ? (
                 <>
-                  <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                     <Card>
                       <CardContent className="space-y-4 p-6">
                         <div className="inline-flex rounded-2xl bg-[#ede4d5] p-3 text-[#8f725a]">
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                                   {purchase.page_count ? <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">{purchase.page_count} pages</span> : null}
                                 </div>
                               </div>
-                              <div className="flex flex-col items-start gap-3 lg:items-end">
+                              <div className="flex flex-row flex-wrap items-center gap-3 lg:flex-col lg:items-end">
                                 <div className="rounded-full bg-[#f5ecdf] px-4 py-2 text-sm font-medium text-[#171511]">Rs. {Number(purchase.price).toFixed(2)}</div>
                                 <div className="text-xs uppercase tracking-[0.2em] text-[#7a7368]">
                                   {purchase.created_at
