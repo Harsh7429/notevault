@@ -100,7 +100,7 @@ export default function ViewerPage({ fileId: fileIdProp }) {
         </title>
       </Head>
       <AppShell>
-        <section className="space-y-8 py-8 sm:py-12">
+        <section className="space-y-6 py-6 sm:space-y-8 sm:py-12">
           {/* Top bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Link
@@ -184,7 +184,7 @@ export default function ViewerPage({ fileId: fileIdProp }) {
                     </div>
                   )}
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
                     <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
                       <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
                         <Tags className="size-4" />
