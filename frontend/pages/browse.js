@@ -122,20 +122,20 @@ export default function BrowsePage() {
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-[1.8rem] border border-[#171511]/8 bg-white/70 p-5 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))] lg:items-end">
+          <div className="grid gap-4 rounded-[1.8rem] border border-[#171511]/8 bg-white/70 p-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))] lg:items-end">
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">Search</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by title, subject, course, or unit"
-                className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-[#171511] outline-none transition focus:border-[#5f6f52]/45"
+                className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-base text-[#171511] outline-none transition focus:border-[#5f6f52]/45"
               />
             </label>
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">Subject</span>
-              <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
+              <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-base text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
                 <option value="all">All subjects</option>
                 {subjects.map((subject) => (
                   <option key={subject} value={subject}>
@@ -147,7 +147,7 @@ export default function BrowsePage() {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">Semester</span>
-              <select value={semesterFilter} onChange={(event) => setSemesterFilter(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
+              <select value={semesterFilter} onChange={(event) => setSemesterFilter(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-base text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
                 <option value="all">All semesters</option>
                 {semesters.map((semester) => (
                   <option key={semester} value={semester}>
@@ -159,7 +159,7 @@ export default function BrowsePage() {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">Sort</span>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="w-full rounded-2xl border border-[#171511]/10 bg-white px-4 py-3 text-base text-[#171511] outline-none transition focus:border-[#5f6f52]/45">
                 <option value="featured">Featured first</option>
                 <option value="newest">Newest</option>
                 <option value="price-asc">Price: Low to high</option>
@@ -176,7 +176,7 @@ export default function BrowsePage() {
                 {filteredFiles.length} result{filteredFiles.length === 1 ? "" : "s"} shown from {files.length} product{files.length === 1 ? "" : "s"}{purchases.length ? `, ${purchases.length} already in your library.` : "."}
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2">
               <Button variant="ghost" onClick={() => {
                 setSearch("");
                 setSubjectFilter("all");
