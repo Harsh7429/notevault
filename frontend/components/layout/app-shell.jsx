@@ -10,13 +10,13 @@ const guestNavItems = [
   { href: "/", label: "Home" },
   { href: "/browse", label: "Browse Notes" },
   { href: "/login", label: "Login" },
-  { href: "/register", label: "Register" }
+  { href: "/register", label: "Register" },
 ];
 
 const signedInNavItems = [
   { href: "/", label: "Home" },
   { href: "/browse", label: "Browse Notes" },
-  { href: "/dashboard", label: "My Library" }
+  { href: "/dashboard", label: "My Library" },
 ];
 
 export function AppShell({ children }) {
@@ -43,20 +43,21 @@ export function AppShell({ children }) {
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(232,218,194,0.6),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(220,228,211,0.55),_transparent_26%)]" />
       <div className="pointer-events-none fixed inset-0 -z-10 soft-grid opacity-50" />
 
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-12 pt-5 sm:px-8 lg:px-10">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-4 sm:px-6 sm:pb-12 sm:pt-5 lg:px-10">
         <motion.header
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="sticky top-5 z-30 mb-10 rounded-[1.75rem] border border-[#171511]/10 bg-[rgba(246,241,232,0.88)] px-4 py-3 shadow-[0_18px_44px_rgba(76,63,43,0.08)] backdrop-blur-xl md:rounded-full"
+          className="sticky top-3 z-30 mb-6 rounded-[1.5rem] border border-[#171511]/10 bg-[rgba(246,241,232,0.92)] px-4 py-3 shadow-[0_18px_44px_rgba(76,63,43,0.08)] backdrop-blur-xl sm:top-5 sm:mb-8 sm:rounded-full"
         >
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex flex-col">
-              <span className="text-xl font-semibold tracking-tight text-[#171511]">NoteVault</span>
-              <span className="text-[11px] uppercase tracking-[0.24em] text-[#7a7368]">Secure notes marketplace</span>
+              <span className="text-base font-semibold tracking-tight text-[#171511] sm:text-xl">NoteVault</span>
+              <span className="text-[10px] uppercase tracking-[0.22em] text-[#7a7368] sm:text-[11px]">Secure notes marketplace</span>
             </Link>
 
-            <nav className="hidden items-center gap-2 md:flex">
+            {/* Desktop nav */}
+            <nav className="hidden items-center gap-1 md:flex">
               {navItems.map((item) => (
                 <Link
                   key={item.label}
@@ -70,16 +71,17 @@ export function AppShell({ children }) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-full border border-[#171511]/10 bg-[#171511] px-4 py-2 text-sm font-medium text-[#f8f4ee] transition hover:bg-[#2a251d]"
+                  className="ml-1 rounded-full border border-[#171511]/10 bg-[#171511] px-4 py-2 text-sm font-medium text-[#f8f4ee] transition hover:bg-[#2a251d]"
                 >
                   Logout
                 </button>
               ) : null}
             </nav>
 
+            {/* Mobile hamburger */}
             <button
               type="button"
-              onClick={() => setMenuOpen((current) => !current)}
+              onClick={() => setMenuOpen((v) => !v)}
               className="inline-flex items-center justify-center rounded-full border border-[#171511]/10 bg-white/80 p-2 text-[#171511] transition hover:bg-white md:hidden"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
@@ -88,13 +90,14 @@ export function AppShell({ children }) {
             </button>
           </div>
 
+          {/* Mobile dropdown */}
           {menuOpen ? (
-            <div className="mt-4 grid gap-2 rounded-[1.4rem] border border-[#171511]/8 bg-white/85 p-3 shadow-[0_18px_40px_rgba(49,45,38,0.08)] md:hidden">
+            <div className="mt-3 grid gap-1 rounded-[1.2rem] border border-[#171511]/8 bg-white/90 p-2 shadow-[0_18px_40px_rgba(49,45,38,0.1)] md:hidden">
               {navItems.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="rounded-[1rem] px-4 py-3 text-sm font-medium text-[#4f493e] transition hover:bg-[#f5efe5] hover:text-[#171511]"
+                  className="rounded-[0.9rem] px-4 py-3 text-sm font-medium text-[#4f493e] transition hover:bg-[#f5efe5] hover:text-[#171511] active:bg-[#ede5d8]"
                 >
                   {item.label}
                 </Link>
@@ -103,7 +106,7 @@ export function AppShell({ children }) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-[1rem] bg-[#171511] px-4 py-3 text-left text-sm font-medium text-[#f8f4ee] transition hover:bg-[#2a251d]"
+                  className="rounded-[0.9rem] bg-[#171511] px-4 py-3 text-left text-sm font-medium text-[#f8f4ee] transition hover:bg-[#2a251d]"
                 >
                   Logout
                 </button>
