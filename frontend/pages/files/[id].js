@@ -190,9 +190,9 @@ export default function FileDetailPage({ fileId: fileIdProp }) {
         )}
 
         {!loading && file && (
-          <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+          <div className="grid gap-6 sm:gap-8 lg:grid-cols-[1fr_380px]">
             {/* ── Left: details ── */}
-            <div className="flex flex-col gap-6">
+            <div className="order-last flex flex-col gap-6 lg:order-first">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-[#171511]">
                   {file.title}
@@ -282,8 +282,8 @@ export default function FileDetailPage({ fileId: fileIdProp }) {
             </div>
 
             {/* ── Right: purchase panel ── */}
-            <div className="flex flex-col gap-4">
-              <Card className="sticky top-6">
+            <div className="order-first flex flex-col gap-4 lg:order-last">
+              <Card className="lg:sticky lg:top-6">
                 <CardContent className="flex flex-col gap-5 p-6">
                   <div className="flex items-baseline justify-between">
                     <span className="text-3xl font-bold text-[#171511]">
