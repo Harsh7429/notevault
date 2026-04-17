@@ -108,3 +108,54 @@ exports.streamProtectedNote = asyncHandler(async (req, res) => {
 
   res.status(200).send(fileBuffer);
 });
+
+exports.downloadProtectedNote = asyncHandler(async (req, res) => {
+  const { PDFDocument } = require("@cantoo/pdf-lib");
+  const { deriveDownloadPassword } = require("../utils/pdf-password");
+
+  const file = req.fileRecord;
+  if (!file) throw createError(404, "File not found.");
+  if (!file.storage_path) throw createError(500, "File storage path is missing.");
+
+  const userId = req.user.id;
+  const password = deriveDownloadPassword(userId, file.id);
+
+  // Download original PDF from Supabase
+  const fileBuffer = await downloadFileBuffer(file.storage_path);
+
+  // Load into pdf-lib and re-save with password encryption
+  const pdfDoc = await PDFDocument.load(fileBuffer);
+  const encryptedBytes = await pdfDoc.save({
+    userPassword: password,
+    ownerPassword: `${password}_nv`,
+  });
+
+  const safeTitle = (file.title || "note").replace(/[^a-zA-Z0-9._-]/g, "-");
+  const fileName = `${safeTitle}-protected.pdf`;
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Length", encryptedBytes.length);
+  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Download-Password", password); // included in header too for reference
+
+  res.status(200).send(Buffer.from(encryptedBytes));
+});
+
+exports.getDownloadPassword = asyncHandler(async (req, res) => {
+  const { deriveDownloadPassword } = require("../utils/pdf-password");
+
+  const file = req.fileRecord;
+  if (!file) throw createError(404, "File not found.");
+
+  const password = deriveDownloadPassword(req.user.id, file.id);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      fileId: file.id,
+      title: file.title,
+      password,
+    },
+  });
+});
