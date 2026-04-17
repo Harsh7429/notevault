@@ -37,7 +37,6 @@ export default function ViewerPage({ fileId: fileIdProp }) {
       })
       .catch((err) => {
         const msg = err.message || "";
-        // Session expired → back to login
         if (
           msg.toLowerCase().includes("session") ||
           msg.toLowerCase().includes("token")
@@ -46,7 +45,6 @@ export default function ViewerPage({ fileId: fileIdProp }) {
           router.replace("/login");
           return;
         }
-        // Not purchased / no access → redirect to the product page
         if (
           msg.toLowerCase().includes("purchase") ||
           msg.toLowerCase().includes("access") ||
@@ -72,8 +70,7 @@ export default function ViewerPage({ fileId: fileIdProp }) {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Top bar: back link + download button */}
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 overflow-x-hidden">
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link
             href="/dashboard"
@@ -105,14 +102,12 @@ export default function ViewerPage({ fileId: fileIdProp }) {
           )}
         </div>
 
-        {/* File title */}
         {file && (
           <h1 className="mb-6 text-xl font-semibold tracking-tight text-[#171511]">
             {file.title}
           </h1>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex min-h-[50vh] items-center justify-center">
             <div className="flex flex-col items-center gap-4">
@@ -127,7 +122,6 @@ export default function ViewerPage({ fileId: fileIdProp }) {
           </div>
         )}
 
-        {/* Error */}
         {!loading && error && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center">
             <p className="text-base font-medium text-red-500">{error}</p>
@@ -141,7 +135,6 @@ export default function ViewerPage({ fileId: fileIdProp }) {
           </div>
         )}
 
-        {/* PDF Viewer */}
         {!loading && !error && viewerUrl && (
           <SecurePdfViewer
             fileUrl={viewerUrl}
@@ -151,7 +144,6 @@ export default function ViewerPage({ fileId: fileIdProp }) {
         )}
       </section>
 
-      {/* Password-protected download modal */}
       {showDownload && file && (
         <DownloadModal
           fileId={fileId}
