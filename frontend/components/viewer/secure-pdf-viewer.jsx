@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 
@@ -12,50 +12,53 @@ const PDF_OPTIONS = {
 };
 
 export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
-  const [pageWidth, setPageWidth] = useState(900);
+  const containerRef = useRef(null);
+  // null = not yet measured; prevents a flash of wrong width
+  const [pageWidth, setPageWidth] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [inputValue, setInputValue] = useState("1");
   const [inputError, setInputError] = useState(false);
 
-  useEffect(() => {
-    function updateWidth() {
-      const vw = window.innerWidth;
-      if (vw < 640) {
-        // On mobile: subtract page px-4 (32px) + card p-3 (24px) + border safety (4px) = 60px
-        setPageWidth(Math.max(260, vw - 60));
-      } else if (vw < 1024) {
-        // Tablet: subtract px-6 (48px) + card p-6 (48px) = 96px
-        setPageWidth(Math.min(720, vw - 96));
-      } else {
-        setPageWidth(860);
-      }
-    }
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
+  // Measure the container's true pixel width and update on resize
+  const measureWidth = useCallback(() => {
+    if (!containerRef.current) return;
+    const w = containerRef.current.offsetWidth;
+    if (w > 0) setPageWidth(w);
   }, []);
+
+  useEffect(() => {
+    // First paint measurement
+    measureWidth();
+    // Watch for layout changes (orientation flip, sidebar open/close, etc.)
+    const ro = new ResizeObserver(() => measureWidth());
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [measureWidth]);
 
   useEffect(() => {
     setInputValue(String(currentPage));
   }, [currentPage]);
 
   const safeNumPages = numPages || 0;
-  const progress = safeNumPages ? Math.round((currentPage / safeNumPages) * 100) : 0;
+  const progress = safeNumPages
+    ? Math.round((currentPage / safeNumPages) * 100)
+    : 0;
 
-  // NO scrolling at all — PDF re-renders in-place, user stays exactly where they are
   function goTo(page) {
     const clamped = Math.max(1, Math.min(safeNumPages, page));
     setCurrentPage(clamped);
   }
-
-  function goToPrev() { if (currentPage > 1) goTo(currentPage - 1); }
-  function goToNext() { if (currentPage < safeNumPages) goTo(currentPage + 1); }
+  function goToPrev() {
+    if (currentPage > 1) goTo(currentPage - 1);
+  }
+  function goToNext() {
+    if (currentPage < safeNumPages) goTo(currentPage + 1);
+  }
 
   function handleInputChange(e) {
     setInputValue(e.target.value);
     setInputError(false);
   }
-
   function commitJump() {
     const parsed = parseInt(inputValue, 10);
     if (!isNaN(parsed) && parsed >= 1 && parsed <= safeNumPages) {
@@ -68,26 +71,33 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
       }, 800);
     }
   }
-
   function handleKeyDown(e) {
-    if (e.key === "Enter") { e.target.blur(); commitJump(); }
-    if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Enter"].includes(e.key)) {
+    if (e.key === "Enter") {
+      e.target.blur();
+      commitJump();
+    }
+    if (
+      !/[0-9]/.test(e.key) &&
+      !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter"].includes(e.key)
+    ) {
       e.preventDefault();
     }
   }
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl sm:rounded-3xl w-full"
+      className="relative w-full overflow-hidden rounded-2xl sm:rounded-3xl"
       style={{
         background: "#0d1117",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(217,183,115,0.14)",
+        boxShadow:
+          "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(217,183,115,0.14)",
       }}
     >
-      {/* Top toolbar */}
+      {/* ── Top toolbar ── */}
       <div
         style={{
-          background: "linear-gradient(180deg, rgba(217,183,115,0.07) 0%, transparent 100%)",
+          background:
+            "linear-gradient(180deg, rgba(217,183,115,0.07) 0%, transparent 100%)",
           borderBottom: "1px solid rgba(217,183,115,0.12)",
         }}
         className="px-4 py-3 sm:px-6 sm:py-4"
@@ -97,15 +107,27 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
           <div className="flex items-center gap-2.5">
             <div
               className="flex items-center justify-center rounded-xl p-2"
-              style={{ background: "rgba(217,183,115,0.1)", border: "1px solid rgba(217,183,115,0.2)" }}
+              style={{
+                background: "rgba(217,183,115,0.1)",
+                border: "1px solid rgba(217,183,115,0.2)",
+              }}
             >
               <BookOpen className="size-4" style={{ color: "#d9b773" }} />
             </div>
             <div className="hidden sm:block">
-              <div className="text-sm font-semibold" style={{ color: "#f0e6cc" }}>NoteVault Reader</div>
-              <div className="text-[10px] uppercase tracking-[0.2em]" style={{ color: "#6b7280" }}>Protected session</div>
+              <div className="text-sm font-semibold" style={{ color: "#f0e6cc" }}>
+                NoteVault Reader
+              </div>
+              <div
+                className="text-[10px] uppercase tracking-[0.2em]"
+                style={{ color: "#6b7280" }}
+              >
+                Protected session
+              </div>
             </div>
-            <div className="sm:hidden text-sm font-semibold" style={{ color: "#f0e6cc" }}>Reader</div>
+            <div className="sm:hidden text-sm font-semibold" style={{ color: "#f0e6cc" }}>
+              Reader
+            </div>
           </div>
 
           {/* Page controls */}
@@ -115,7 +137,12 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
               onClick={goToPrev}
               disabled={currentPage <= 1}
               className="flex items-center justify-center rounded-full p-2 transition-all disabled:cursor-not-allowed disabled:opacity-30"
-              style={{ background: "rgba(217,183,115,0.08)", border: "1px solid rgba(217,183,115,0.15)", color: "#d9b773" }}
+              style={{
+                background: "rgba(217,183,115,0.08)",
+                border: "1px solid rgba(217,183,115,0.15)",
+                color: "#d9b773",
+              }}
+              aria-label="Previous page"
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -131,16 +158,24 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
                 disabled={!safeNumPages}
                 aria-label="Go to page"
                 style={{
-                  background: inputError ? "rgba(239,68,68,0.12)" : "rgba(217,183,115,0.08)",
-                  border: inputError ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(217,183,115,0.2)",
+                  background: inputError
+                    ? "rgba(239,68,68,0.12)"
+                    : "rgba(217,183,115,0.08)",
+                  border: inputError
+                    ? "1px solid rgba(239,68,68,0.4)"
+                    : "1px solid rgba(217,183,115,0.2)",
                   color: inputError ? "#f87171" : "#f0e6cc",
-                  // 16px min font-size to prevent iOS zoom
-                  fontSize: "16px",
+                  fontSize: "16px", // Prevent iOS auto-zoom on focus
                 }}
                 className="w-14 rounded-lg py-1.5 text-center font-semibold outline-none transition-all disabled:opacity-40"
               />
-              <span className="text-sm" style={{ color: "#4b5563" }}>/</span>
-              <span className="min-w-[2ch] text-sm font-medium" style={{ color: "#9ca3af" }}>
+              <span className="text-sm" style={{ color: "#4b5563" }}>
+                /
+              </span>
+              <span
+                className="min-w-[2ch] text-sm font-medium"
+                style={{ color: "#9ca3af" }}
+              >
                 {safeNumPages || "—"}
               </span>
             </div>
@@ -150,7 +185,12 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
               onClick={goToNext}
               disabled={!safeNumPages || currentPage >= safeNumPages}
               className="flex items-center justify-center rounded-full p-2 transition-all disabled:cursor-not-allowed disabled:opacity-30"
-              style={{ background: "rgba(217,183,115,0.08)", border: "1px solid rgba(217,183,115,0.15)", color: "#d9b773" }}
+              style={{
+                background: "rgba(217,183,115,0.08)",
+                border: "1px solid rgba(217,183,115,0.15)",
+                color: "#d9b773",
+              }}
+              aria-label="Next page"
             >
               <ChevronRight className="size-4" />
             </button>
@@ -159,64 +199,94 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
 
         {/* Progress bar */}
         {safeNumPages > 0 && (
-          <div className="mt-3 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.05)", height: "3px" }}>
+          <div
+            className="mt-3 overflow-hidden rounded-full"
+            style={{ background: "rgba(255,255,255,0.05)", height: "3px" }}
+          >
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${progress}%`, background: "linear-gradient(90deg, #b8973a, #d9b773, #f0d898)" }}
+              style={{
+                width: `${progress}%`,
+                background: "linear-gradient(90deg, #b8973a, #d9b773, #f0d898)",
+              }}
             />
           </div>
         )}
       </div>
 
-      {/* PDF canvas */}
-      <div className="select-none p-3 sm:p-6" style={{ background: "#0d1117", overflowX: "hidden" }}>
-        <Document
-          file={fileUrl}
-          options={PDF_OPTIONS}
-          loading={
-            <div className="flex flex-col items-center gap-4 py-20">
-              <div
-                className="h-10 w-10 rounded-full border-2 border-transparent"
-                style={{ borderTopColor: "#d9b773", animation: "spin 0.8s linear infinite" }}
-              />
-              <p className="text-sm" style={{ color: "#6b7280" }}>Loading document…</p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          }
-          error={
-            <div className="py-16 text-center">
-              <p className="text-sm" style={{ color: "#f87171" }}>
-                Unable to render this PDF. Please refresh and try again.
-              </p>
-            </div>
-          }
-          onLoadSuccess={(payload) => {
-            onDocumentLoadSuccess(payload);
-            setCurrentPage(1);
-            setInputValue("1");
-          }}
-          onLoadError={(err) => console.error("[Viewer]", err?.message || err)}
-        >
-          <div
-            className="overflow-hidden mx-auto"
-            style={{ borderRadius: "10px", boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)", maxWidth: "100%", width: "fit-content" }}
+      {/* ── PDF canvas ──
+          ref={containerRef} measures the TRUE available pixel width so the
+          Page component never overflows on any screen size, including phones
+          in portrait or landscape. pageWidth stays null until the first paint
+          measurement fires — this prevents react-pdf from rendering at the
+          wrong width and then re-rendering. */}
+      <div
+        ref={containerRef}
+        className="select-none p-3 sm:p-6"
+        style={{ background: "#0d1117", overflowX: "hidden" }}
+      >
+        {pageWidth !== null && (
+          <Document
+            file={fileUrl}
+            options={PDF_OPTIONS}
+            loading={
+              <div className="flex flex-col items-center gap-4 py-20">
+                <div
+                  className="h-10 w-10 rounded-full border-2 border-transparent"
+                  style={{
+                    borderTopColor: "#d9b773",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  Loading document…
+                </p>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            }
+            error={
+              <div className="py-16 text-center">
+                <p className="text-sm" style={{ color: "#f87171" }}>
+                  Unable to render this PDF. Please refresh and try again.
+                </p>
+              </div>
+            }
+            onLoadSuccess={(payload) => {
+              onDocumentLoadSuccess(payload);
+              setCurrentPage(1);
+              setInputValue("1");
+            }}
+            onLoadError={(err) =>
+              console.error("[Viewer]", err?.message || err)
+            }
           >
-            <Page
-              key={`page_${currentPage}`}
-              pageNumber={currentPage}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              width={pageWidth}
-              className="block"
-            />
-          </div>
-        </Document>
+            <div
+              style={{
+                borderRadius: "10px",
+                overflow: "hidden",
+                boxShadow:
+                  "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)",
+              }}
+            >
+              <Page
+                key={`page_${currentPage}`}
+                pageNumber={currentPage}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                width={pageWidth}
+              />
+            </div>
+          </Document>
+        )}
       </div>
 
-      {/* Bottom nav */}
+      {/* ── Bottom nav (only shown when doc has multiple pages) ── */}
       {safeNumPages > 1 && (
         <div
-          style={{ borderTop: "1px solid rgba(217,183,115,0.1)", background: "rgba(217,183,115,0.03)" }}
+          style={{
+            borderTop: "1px solid rgba(217,183,115,0.1)",
+            background: "rgba(217,183,115,0.03)",
+          }}
           className="flex items-center justify-between px-4 py-3 sm:px-6"
         >
           <button
@@ -224,7 +294,11 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
             onClick={goToPrev}
             disabled={currentPage <= 1}
             className="rounded-full px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
-            style={{ background: "rgba(217,183,115,0.08)", border: "1px solid rgba(217,183,115,0.15)", color: "#d9b773" }}
+            style={{
+              background: "rgba(217,183,115,0.08)",
+              border: "1px solid rgba(217,183,115,0.15)",
+              color: "#d9b773",
+            }}
           >
             ← Prev
           </button>
@@ -236,7 +310,11 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
             onClick={goToNext}
             disabled={currentPage >= safeNumPages}
             className="rounded-full px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
-            style={{ background: "rgba(217,183,115,0.08)", border: "1px solid rgba(217,183,115,0.15)", color: "#d9b773" }}
+            style={{
+              background: "rgba(217,183,115,0.08)",
+              border: "1px solid rgba(217,183,115,0.15)",
+              color: "#d9b773",
+            }}
           >
             Next →
           </button>
