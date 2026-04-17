@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@cantoo/pdf-lib": "^2.6.5",
     "@supabase/supabase-js": "^2.49.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -20,6 +21,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
     "nodemailer": "^8.0.4",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.16.0",
     "razorpay": "^2.9.6",
     "resend": "^6.10.0"
