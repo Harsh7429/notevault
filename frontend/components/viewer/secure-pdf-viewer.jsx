@@ -20,9 +20,15 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
   useEffect(() => {
     function updateWidth() {
       const vw = window.innerWidth;
-      if (vw < 640) setPageWidth(Math.max(280, vw - 32));
-      else if (vw < 1024) setPageWidth(Math.min(720, vw - 80));
-      else setPageWidth(860);
+      if (vw < 640) {
+        // On mobile: subtract page px-4 (32px) + card p-3 (24px) + border safety (4px) = 60px
+        setPageWidth(Math.max(260, vw - 60));
+      } else if (vw < 1024) {
+        // Tablet: subtract px-6 (48px) + card p-6 (48px) = 96px
+        setPageWidth(Math.min(720, vw - 96));
+      } else {
+        setPageWidth(860);
+      }
     }
     updateWidth();
     window.addEventListener("resize", updateWidth);
@@ -72,7 +78,7 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl sm:rounded-3xl"
+      className="relative overflow-hidden rounded-2xl sm:rounded-3xl w-full"
       style={{
         background: "#0d1117",
         boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(217,183,115,0.14)",
@@ -163,7 +169,7 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
       </div>
 
       {/* PDF canvas */}
-      <div className="select-none p-3 sm:p-6" style={{ background: "#0d1117" }}>
+      <div className="select-none p-3 sm:p-6" style={{ background: "#0d1117", overflowX: "hidden" }}>
         <Document
           file={fileUrl}
           options={PDF_OPTIONS}
@@ -192,8 +198,8 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
           onLoadError={(err) => console.error("[Viewer]", err?.message || err)}
         >
           <div
-            className="overflow-hidden"
-            style={{ borderRadius: "10px", boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)" }}
+            className="overflow-hidden mx-auto"
+            style={{ borderRadius: "10px", boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)", maxWidth: "100%", width: "fit-content" }}
           >
             <Page
               key={`page_${currentPage}`}
@@ -201,7 +207,7 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
               renderTextLayer={false}
               renderAnnotationLayer={false}
               width={pageWidth}
-              className="mx-auto block"
+              className="block"
             />
           </div>
         </Document>
