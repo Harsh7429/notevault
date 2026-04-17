@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { clearStoredToken, getStoredToken } from "@/lib/auth";
-import { fetchCurrentUser, fetchMyPurchases, logoutUser } from "@/lib/api";
+import { fetchCurrentUser, fetchMyPurchases, logoutUser, fetchDownloadPassword } from "@/lib/api";
 
 function purchaseMeta(purchase) {
   return [purchase.subject, purchase.course, purchase.semester, purchase.unit_label].filter(Boolean);
@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [passwordModal, setPasswordModal] = useState(null); // { fileId, title, password }
 
   useEffect(() => {
     const token = getStoredToken();
@@ -289,6 +290,15 @@ export default function DashboardPage() {
                                   <Button asChild>
                                     <Link href={`/viewer/${purchase.file_id}`}>Open viewer</Link>
                                   </Button>
+                                  <Button variant="ghost" onClick={async () => {
+                                    const token = getStoredToken();
+                                    try {
+                                      const data = await fetchDownloadPassword(token, purchase.file_id);
+                                      setPasswordModal({ fileId: purchase.file_id, title: purchase.title, password: data.password });
+                                    } catch (e) { alert(e.message); }
+                                  }}>
+                                    🔑 Password
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -303,6 +313,23 @@ export default function DashboardPage() {
           )}
         </section>
       </AppShell>
+      {passwordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setPasswordModal(null)}>
+          <div className="w-full max-w-sm rounded-3xl border border-[#171511]/10 bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-heading text-xl font-semibold text-[#171511]">Your Download Password</h3>
+            <p className="mt-1 text-sm text-[#5a5449]">{passwordModal.title}</p>
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-[#171511]/10 bg-[#f8f3ea] px-4 py-3">
+              <span className="font-mono text-lg font-bold tracking-widest text-[#171511]">{passwordModal.password}</span>
+              <button
+                onClick={() => { navigator.clipboard.writeText(passwordModal.password); }}
+                className="rounded-xl border border-[#171511]/10 bg-white px-3 py-1.5 text-xs font-medium text-[#171511] transition hover:bg-[#f0e8da]"
+              >Copy</button>
+            </div>
+            <p className="mt-3 text-xs text-[#7a7368]">Use this password to open the encrypted PDF in any PDF reader after downloading from the viewer.</p>
+            <button onClick={() => setPasswordModal(null)} className="mt-4 w-full rounded-2xl bg-[#171511] py-3 text-sm font-medium text-white transition hover:bg-[#2a251d]">Close</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
