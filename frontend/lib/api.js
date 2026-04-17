@@ -212,4 +212,18 @@ export async function fetchAdminSales(token) {
   return payload.data;
 }
 
+
+export async function fetchDownloadPassword(token, fileId) {
+  const payload = await request(`/api/files/${fileId}/download-password`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return payload.data;
+}
+
+export function buildDownloadUrl(fileId) {
+  return `${API_BASE_URL}/api/files/${fileId}/download`;
+}
+
 export { API_BASE_URL };
