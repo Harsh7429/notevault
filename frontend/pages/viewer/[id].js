@@ -1,242 +1,197 @@
-import Head from "next/head";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
-import { ArrowLeft, Clock3, ShieldAlert, ShieldCheck, Tags } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, Download, Key, Loader2, Lock, X } from "lucide-react";
+import { buildDownloadUrl, fetchDownloadPassword } from "@/lib/api";
+import { getStoredToken } from "@/lib/auth";
 
-import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { clearStoredToken, getStoredToken } from "@/lib/auth";
-import { fetchCurrentUser, fetchSecureViewerAccess } from "@/lib/api";
+export function DownloadModal({ fileId, fileName, onClose }) {
+  const [step, setStep] = useState("confirm"); // confirm | loading | ready | downloading
+  const [password, setPassword] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
 
-const SecurePdfViewer = dynamic(
-  () => import("@/components/viewer/secure-pdf-viewer").then((m) => m.SecurePdfViewer),
-  { ssr: false }
-);
-
-export default function ViewerPage({ fileId: fileIdProp }) {
-  const router = useRouter();
-  // SSR prop on hard load, router.query on client-side nav
-  const fileId = fileIdProp ?? router.query.id;
-
-  const [state, setState] = useState({
-    loading: true,
-    error: "",
-    file: null,
-    viewerUrl: "",
-    email: "",
-    numPages: 0,
-  });
-
-  const metaChips = useMemo(() => {
-    return [
-      state.file?.subject,
-      state.file?.course,
-      state.file?.semester,
-      state.file?.unitLabel,
-    ].filter(Boolean);
-  }, [state.file]);
-
+  // Lock body scroll while modal is open
   useEffect(() => {
-    if (!fileId) return;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
-    const token = getStoredToken();
-
-    if (!token) {
-      window.location.href = "/login";
-      return;
+  async function handleRevealAndDownload() {
+    setStep("loading");
+    setError("");
+    try {
+      const token = getStoredToken();
+      const data = await fetchDownloadPassword(token, fileId);
+      setPassword(data.password);
+      setStep("ready");
+    } catch (err) {
+      setError(err.message || "Failed to prepare download.");
+      setStep("confirm");
     }
+  }
 
-    // Block right-click, drag, print shortcuts
-    const blockEvent = (e) => e.preventDefault();
-    const blockShortcuts = (e) => {
-      const key = e.key.toLowerCase();
-      const mod = e.ctrlKey || e.metaKey;
-      if (e.key === "F12" || key === "printscreen") e.preventDefault();
-      if (mod && ["p", "s", "u"].includes(key)) e.preventDefault();
-    };
+  async function handleDownload() {
+    setStep("downloading");
+    try {
+      const token = getStoredToken();
+      const url = buildDownloadUrl(fileId);
 
-    document.addEventListener("contextmenu", blockEvent);
-    document.addEventListener("dragstart", blockEvent);
-    document.addEventListener("keydown", blockShortcuts);
-    window.addEventListener("beforeprint", blockEvent);
-
-    Promise.all([fetchCurrentUser(token), fetchSecureViewerAccess(token, fileId)])
-      .then(([user, access]) => {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          email: user.email,
-          viewerUrl: access.viewerUrl,
-          file: access.file,
-          error: "",
-        }));
-      })
-      .catch((err) => {
-        if (
-          err.message?.toLowerCase().includes("session") ||
-          err.message?.toLowerCase().includes("token")
-        ) {
-          clearStoredToken();
-        }
-        setState((prev) => ({ ...prev, loading: false, error: err.message }));
+      // Fetch with auth header then trigger browser download
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-    return () => {
-      document.removeEventListener("contextmenu", blockEvent);
-      document.removeEventListener("dragstart", blockEvent);
-      document.removeEventListener("keydown", blockShortcuts);
-      window.removeEventListener("beforeprint", blockEvent);
-    };
-  }, [fileId]);
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.message || "Download failed.");
+      }
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${fileName || "note"}-protected.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      setStep("ready"); // back to ready so user can copy password again
+    } catch (err) {
+      setError(err.message || "Download failed. Please try again.");
+      setStep("ready");
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(password).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   return (
     <>
-      <Head>
-        <title>
-          {state.file ? `${state.file.title} Viewer | NoteVault` : "Secure Viewer | NoteVault"}
-        </title>
-      </Head>
-      <AppShell>
-        <section className="space-y-6 py-6 sm:space-y-8 sm:py-12">
-          {/* Top bar */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Link
-              href={`/files/${fileId}`}
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#5a5449] transition hover:text-[#171511]"
-            >
-              <ArrowLeft className="size-4" />
-              Back to product
-            </Link>
-            <div className="rounded-full border border-[#171511]/10 bg-white px-4 py-2 text-sm text-[#5f6f52]">
-              Secure viewer mode
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="fixed inset-x-4 top-1/2 z-50 mx-auto max-w-md -translate-y-1/2 rounded-3xl shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
+        style={{ background: "#0d1117", border: "1px solid rgba(217,183,115,0.18)" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl p-2" style={{ background: "rgba(217,183,115,0.1)", border: "1px solid rgba(217,183,115,0.2)" }}>
+              <Lock className="size-4" style={{ color: "#d9b773" }} />
+            </div>
+            <div>
+              <p className="font-semibold" style={{ color: "#f0e6cc" }}>Protected Download</p>
+              <p className="text-xs" style={{ color: "#6b7280" }}>Encrypted with your personal key</p>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 transition-colors"
+            style={{ color: "#6b7280" }}
+            onMouseEnter={e => e.currentTarget.style.color = "#f0e6cc"}
+            onMouseLeave={e => e.currentTarget.style.color = "#6b7280"}
+          >
+            <X className="size-5" />
+          </button>
+        </div>
 
-          {/* Loading */}
-          {state.loading && (
-            <Card>
-              <CardContent className="p-8 text-[#5a5449]">
-                Preparing your protected viewer...
-              </CardContent>
-            </Card>
+        {/* Body */}
+        <div className="p-6 pt-4 space-y-5">
+
+          {/* Step: confirm */}
+          {step === "confirm" && (
+            <>
+              <div className="rounded-2xl p-4 text-sm leading-6" style={{ background: "rgba(217,183,115,0.06)", border: "1px solid rgba(217,183,115,0.1)", color: "#c9bfae" }}>
+                The PDF will be locked with a <strong style={{ color: "#d9b773" }}>unique password</strong> generated specifically for your account.
+                Keep the password safe — you'll need it to open the file in any PDF reader.
+              </div>
+              {error && (
+                <p className="text-sm text-red-400">{error}</p>
+              )}
+              <button
+                onClick={handleRevealAndDownload}
+                className="w-full rounded-2xl py-3 text-sm font-semibold transition-all"
+                style={{ background: "rgba(217,183,115,0.12)", border: "1px solid rgba(217,183,115,0.25)", color: "#d9b773" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(217,183,115,0.2)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(217,183,115,0.12)"}
+              >
+                Get my password &amp; download
+              </button>
+            </>
           )}
 
-          {/* Error */}
-          {!state.loading && state.error && (
-            <Card>
-              <CardContent className="space-y-4 p-8">
-                <div className="inline-flex rounded-2xl bg-[#f4ebe6] p-3 text-[#b36e58]">
-                  <ShieldAlert className="size-6" />
-                </div>
-                <h1 className="text-3xl font-semibold text-[#171511]">Viewer access blocked</h1>
-                <p className="text-[#5a5449]">{state.error}</p>
-                <div className="flex gap-3">
-                  <Button asChild>
-                    <Link href="/login">Go to login</Link>
-                  </Button>
-                  <Button asChild variant="ghost">
-                    <Link href={`/files/${fileId}`}>Return to file</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Viewer */}
-          {!state.loading && !state.error && (
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="space-y-5 p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h1 className="text-3xl font-semibold text-[#171511]">
-                        {state.file?.title}
-                      </h1>
-                      <p className="mt-2 max-w-3xl text-[#5a5449]">
-                        Protected access granted for {state.email}. This session includes
-                        browser-side restrictions.
-                      </p>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-[#eff4ea] px-4 py-2 text-sm text-[#5f6f52]">
-                      <ShieldCheck className="size-4" />
-                      Viewing only
-                    </div>
-                  </div>
-
-                  {metaChips.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {metaChips.map((chip) => (
-                        <span
-                          key={chip}
-                          className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                      {state.file?.pageCount ? (
-                        <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">
-                          {state.file.pageCount} pages
-                        </span>
-                      ) : null}
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
-                    <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
-                      <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
-                        <Tags className="size-4" />
-                        Access
-                      </div>
-                      <div className="mt-2 leading-7">
-                        Open this document only inside the protected NoteVault viewer.
-                      </div>
-                    </div>
-                    <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
-                      <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
-                        <Clock3 className="size-4" />
-                        Session
-                      </div>
-                      <div className="mt-2 leading-7">
-                        Viewer requests flow through a protected backend route with JWT and
-                        purchase enforcement.
-                      </div>
-                    </div>
-                    <div className="rounded-[1.4rem] border border-[#171511]/8 bg-white p-4 text-sm text-[#5a5449]">
-                      <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#7a7368]">
-                        <ShieldCheck className="size-4" />
-                        Protection
-                      </div>
-                      <div className="mt-2 leading-7">
-                        Right-click, print and save shortcuts are disabled for this session.
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <SecurePdfViewer
-                fileUrl={state.viewerUrl}
-                email={state.email}
-                numPages={state.numPages}
-                onDocumentLoadSuccess={({ numPages }) => {
-                  setState((prev) => ({ ...prev, numPages }));
-                }}
-              />
+          {/* Step: loading */}
+          {step === "loading" && (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <Loader2 className="size-8 animate-spin" style={{ color: "#d9b773" }} />
+              <p className="text-sm" style={{ color: "#9ca3af" }}>Preparing your encrypted PDF…</p>
             </div>
           )}
-        </section>
-      </AppShell>
+
+          {/* Step: ready / downloading */}
+          {(step === "ready" || step === "downloading") && (
+            <>
+              {/* Password display */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "#6b7280" }}>
+                  Your personal PDF password
+                </p>
+                <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: "rgba(217,183,115,0.07)", border: "1px solid rgba(217,183,115,0.15)" }}>
+                  <Key className="size-4 shrink-0" style={{ color: "#d9b773" }} />
+                  <span className="flex-1 font-mono text-lg font-bold tracking-widest" style={{ color: "#f0e6cc" }}>
+                    {password}
+                  </span>
+                  <button
+                    onClick={handleCopy}
+                    className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all"
+                    style={{
+                      background: copied ? "rgba(74,222,128,0.15)" : "rgba(217,183,115,0.1)",
+                      border: copied ? "1px solid rgba(74,222,128,0.3)" : "1px solid rgba(217,183,115,0.2)",
+                      color: copied ? "#4ade80" : "#d9b773",
+                    }}
+                  >
+                    {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs" style={{ color: "#6b7280" }}>
+                  Save this password. You can always retrieve it again from your library.
+                </p>
+              </div>
+
+              {/* Warning */}
+              <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#fca5a5" }}>
+                ⚠️ This file is encrypted for <strong>your account only</strong>. Sharing the file without the password makes it unreadable. Sharing both the file and password violates the terms of purchase.
+              </div>
+
+              {/* Download button */}
+              <button
+                onClick={handleDownload}
+                disabled={step === "downloading"}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-all disabled:opacity-60"
+                style={{
+                  background: "linear-gradient(135deg, #b8973a, #d9b773)",
+                  color: "#0d1117",
+                }}
+              >
+                {step === "downloading" ? (
+                  <><Loader2 className="size-4 animate-spin" /> Downloading…</>
+                ) : (
+                  <><Download className="size-4" /> Download Encrypted PDF</>
+                )}
+              </button>
+
+              {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
-}
-
-export async function getServerSideProps(context) {
-  return {
-    props: {
-      fileId: context.params.id,
-    },
-  };
 }
