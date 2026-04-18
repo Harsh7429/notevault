@@ -29,6 +29,13 @@ adminRouter.delete(
   adminController.deleteFile
 );
 
+// Returns full file records (includes download_password) — admin only
+adminRouter.get(
+  "/admin/files",
+  authenticate, requireAdmin,
+  adminController.getAdminFiles
+);
+
 adminRouter.get(
   "/admin/users",
   authenticate, requireAdmin,
