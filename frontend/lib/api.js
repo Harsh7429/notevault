@@ -191,6 +191,13 @@ export async function deleteAdminFile(token, fileId) {
   });
 }
 
+export async function fetchAdminFiles(token) {
+  const payload = await request("/api/admin/files", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return payload.data || [];
+}
+
 export async function fetchAdminSales(token) {
   const payload = await request("/api/admin/sales", {
     headers: {
