@@ -159,6 +159,15 @@ exports.deleteFile = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: "File deleted successfully." });
 });
 
+/**
+ * Returns all file records including download_password — admin only.
+ * The public /api/files endpoint strips this field via toPublicFile.
+ */
+exports.getAdminFiles = asyncHandler(async (req, res) => {
+  const files = await getAllFiles();
+  res.status(200).json({ success: true, data: files });
+});
+
 exports.getUsers = asyncHandler(async (req, res) => {
   res.status(501).json({
     success: false,
