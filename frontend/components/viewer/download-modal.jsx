@@ -1,96 +1,102 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Download, Key, Loader2, Lock, X, AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle, Check, Copy, Download,
+  Key, Loader2, Lock, X,
+} from "lucide-react";
 import { buildDownloadUrl, fetchDownloadPassword } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
 
+/**
+ * Download flow:
+ *
+ * 1. "confirm" — user sees an info box and clicks the CTA button.
+ * 2. "loading"  — we call /download-password to find out if a password exists.
+ * 3a. "ready"   — password exists: show it, then let the user download.
+ * 3b. Directly triggers the download when there is NO password set.
+ * 4. "downloading" — fetch in progress.
+ */
 export function DownloadModal({ fileId, fileName, onClose }) {
-  const [step, setStep] = useState("confirm"); // confirm | loading | ready | downloading
-  const [password, setPassword] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState("");
+  const [step,        setStep]     = useState("confirm");
+  const [password,    setPassword] = useState("");
+  const [hasPassword, setHasPassword] = useState(false);
+  const [copied,      setCopied]   = useState(false);
+  const [error,       setError]    = useState("");
 
-  // Lock body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // ── Step 1: fetch the per-user password from the backend ──
-  async function handleRevealPassword() {
+  // ── Step 1: fetch password info ───────────────────────────────────────────
+  async function handleStart() {
     setStep("loading");
     setError("");
     try {
       const token = getStoredToken();
       if (!token) throw new Error("You are not logged in.");
+
       const data = await fetchDownloadPassword(token, fileId);
-      if (!data?.password) throw new Error("Server did not return a password.");
-      setPassword(data.password);
-      setStep("ready");
+
+      if (data.hasPassword && data.password) {
+        setPassword(data.password);
+        setHasPassword(true);
+        setStep("ready");           // show the password before downloading
+      } else {
+        setHasPassword(false);
+        // No password set — go straight to download
+        await triggerDownload();
+      }
     } catch (err) {
       setError(err.message || "Failed to prepare download.");
       setStep("confirm");
     }
   }
 
-  // ── Step 2: trigger the authenticated download ──
-  // We use fetch + Blob so the Authorization header is sent (required by the
-  // backend). A plain <a href> would NOT send the header and would return 401.
-  async function handleDownload() {
+  // ── Step 2: download ──────────────────────────────────────────────────────
+  async function triggerDownload() {
     setStep("downloading");
     setError("");
     try {
       const token = getStoredToken();
       if (!token) throw new Error("You are not logged in.");
 
-      const url = buildDownloadUrl(fileId);
-
-      const res = await fetch(url, {
+      const res = await fetch(buildDownloadUrl(fileId), {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
-        // Try to parse a JSON error body; fall back to status text
         let msg = `Server error ${res.status}`;
-        try {
-          const json = await res.json();
-          msg = json.message || msg;
-        } catch {
-          // not JSON — keep status message
-        }
+        try { const j = await res.json(); msg = j.message || msg; } catch {}
         throw new Error(msg);
       }
 
-      // Verify the response is actually a PDF, not an error page
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/pdf")) {
-        throw new Error(
-          `Unexpected response type: ${contentType}. Please try again.`
-        );
+        throw new Error(`Unexpected response type: ${contentType}. Please try again.`);
       }
 
       const blob = await res.blob();
-      if (blob.size === 0) {
-        throw new Error("Received empty file. Please try again.");
-      }
+      if (blob.size === 0) throw new Error("Received empty file. Please try again.");
 
-      // Trigger browser download
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = `${(fileName || "note").replace(/[^a-zA-Z0-9._-]/g, "-")}-protected.pdf`;
+      a.href     = objectUrl;
+      a.download = `${(fileName || "note").replace(/[^a-zA-Z0-9._-]/g, "-")}-download.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      // Small delay before revoking so the download can start
       setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
 
-      setStep("ready"); // back to ready so user can copy password or download again
+      // Stay on "ready" if there was a password to show; otherwise close
+      if (hasPassword) {
+        setStep("ready");
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err.message || "Download failed. Please try again.");
-      setStep("ready");
+      setStep(hasPassword ? "ready" : "confirm");
     }
   }
 
@@ -112,30 +118,20 @@ export function DownloadModal({ fileId, fileName, onClose }) {
       {/* Modal */}
       <div
         className="fixed inset-x-4 top-1/2 z-50 mx-auto max-w-md -translate-y-1/2 rounded-3xl shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
-        style={{
-          background: "#0d1117",
-          border: "1px solid rgba(217,183,115,0.18)",
-        }}
+        style={{ background: "#0d1117", border: "1px solid rgba(217,183,115,0.18)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6">
           <div className="flex items-center gap-3">
             <div
               className="rounded-xl p-2"
-              style={{
-                background: "rgba(217,183,115,0.1)",
-                border: "1px solid rgba(217,183,115,0.2)",
-              }}
+              style={{ background: "rgba(217,183,115,0.1)", border: "1px solid rgba(217,183,115,0.2)" }}
             >
               <Lock className="size-4" style={{ color: "#d9b773" }} />
             </div>
             <div>
-              <p className="font-semibold" style={{ color: "#f0e6cc" }}>
-                Protected Download
-              </p>
-              <p className="text-xs" style={{ color: "#6b7280" }}>
-                Encrypted with your personal key
-              </p>
+              <p className="font-semibold" style={{ color: "#f0e6cc" }}>Download File</p>
+              <p className="text-xs" style={{ color: "#6b7280" }}>Purchased content delivery</p>
             </div>
           </div>
           <button
@@ -153,7 +149,7 @@ export function DownloadModal({ fileId, fileName, onClose }) {
         {/* Body */}
         <div className="space-y-5 p-6 pt-4">
 
-          {/* ── Step: confirm ── */}
+          {/* ── confirm ── */}
           {step === "confirm" && (
             <>
               <div
@@ -164,68 +160,41 @@ export function DownloadModal({ fileId, fileName, onClose }) {
                   color: "#c9bfae",
                 }}
               >
-                The PDF will be locked with a{" "}
-                <strong style={{ color: "#d9b773" }}>unique password</strong>{" "}
-                generated for your account. Keep it safe — you&apos;ll need it
-                to open the file in any PDF reader.
+                Click below to download your purchased PDF. If a password has been set for this file, it will be shown to you before the download begins.
               </div>
-              {error && (
-                <div
-                  className="flex items-start gap-2 rounded-xl px-4 py-3 text-sm"
-                  style={{
-                    background: "rgba(239,68,68,0.08)",
-                    border: "1px solid rgba(239,68,68,0.2)",
-                    color: "#fca5a5",
-                  }}
-                >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {error}
-                </div>
-              )}
-              <button
-                onClick={handleRevealPassword}
-                className="w-full rounded-2xl py-3 text-sm font-semibold transition-all"
-                style={{
-                  background: "rgba(217,183,115,0.12)",
-                  border: "1px solid rgba(217,183,115,0.25)",
-                  color: "#d9b773",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(217,183,115,0.2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background =
-                    "rgba(217,183,115,0.12)")
-                }
-              >
-                Get my password &amp; download
-              </button>
+              {error && <ErrorBox message={error} />}
+              <GoldButton onClick={handleStart}>
+                Prepare download
+              </GoldButton>
             </>
           )}
 
-          {/* ── Step: loading ── */}
+          {/* ── loading ── */}
           {step === "loading" && (
-            <div className="flex flex-col items-center gap-3 py-6">
-              <Loader2
-                className="size-8 animate-spin"
-                style={{ color: "#d9b773" }}
-              />
-              <p className="text-sm" style={{ color: "#9ca3af" }}>
-                Preparing your encrypted PDF…
-              </p>
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="size-8 animate-spin" style={{ color: "#d9b773" }} />
+              <p className="text-sm" style={{ color: "#9ca3af" }}>Preparing your file…</p>
             </div>
           )}
 
-          {/* ── Step: ready / downloading ── */}
-          {(step === "ready" || step === "downloading") && (
+          {/* ── downloading (no password) ── */}
+          {step === "downloading" && !hasPassword && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="size-8 animate-spin" style={{ color: "#d9b773" }} />
+              <p className="text-sm" style={{ color: "#9ca3af" }}>Downloading…</p>
+            </div>
+          )}
+
+          {/* ── ready (password exists) ── */}
+          {(step === "ready" || (step === "downloading" && hasPassword)) && (
             <>
-              {/* Password display */}
+              {/* Password card */}
               <div>
                 <p
                   className="mb-2 text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "#6b7280" }}
                 >
-                  Your personal PDF password
+                  Your file password
                 </p>
                 <div
                   className="flex items-center gap-3 rounded-2xl p-4"
@@ -245,26 +214,17 @@ export function DownloadModal({ fileId, fileName, onClose }) {
                     onClick={handleCopy}
                     className="rounded-xl px-3 py-1.5 text-xs font-medium transition-all"
                     style={{
-                      background: copied
-                        ? "rgba(74,222,128,0.15)"
-                        : "rgba(217,183,115,0.1)",
-                      border: copied
-                        ? "1px solid rgba(74,222,128,0.3)"
-                        : "1px solid rgba(217,183,115,0.2)",
-                      color: copied ? "#4ade80" : "#d9b773",
+                      background: copied ? "rgba(74,222,128,0.15)" : "rgba(217,183,115,0.1)",
+                      border:     copied ? "1px solid rgba(74,222,128,0.3)" : "1px solid rgba(217,183,115,0.2)",
+                      color:      copied ? "#4ade80" : "#d9b773",
                     }}
                     aria-label="Copy password"
                   >
-                    {copied ? (
-                      <Check className="size-3.5" />
-                    ) : (
-                      <Copy className="size-3.5" />
-                    )}
+                    {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   </button>
                 </div>
                 <p className="mt-2 text-xs" style={{ color: "#6b7280" }}>
-                  Save this password. You can retrieve it again from your
-                  library at any time.
+                  Save this password — you will need it to open the downloaded PDF in any reader.
                 </p>
               </div>
 
@@ -277,47 +237,22 @@ export function DownloadModal({ fileId, fileName, onClose }) {
                   color: "#fca5a5",
                 }}
               >
-                ⚠️ This file is encrypted{" "}
-                <strong>for your account only</strong>. Sharing it without the
-                password makes it unreadable. Sharing both violates the terms of
-                purchase.
+                ⚠️ This file is encrypted for <strong>your purchase only</strong>. Sharing it violates the terms of purchase.
               </div>
 
-              {/* Error display */}
-              {error && (
-                <div
-                  className="flex items-start gap-2 rounded-xl px-4 py-3 text-sm"
-                  style={{
-                    background: "rgba(239,68,68,0.08)",
-                    border: "1px solid rgba(239,68,68,0.2)",
-                    color: "#fca5a5",
-                  }}
-                >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {error}
-                </div>
-              )}
+              {error && <ErrorBox message={error} />}
 
               {/* Download button */}
               <button
-                onClick={handleDownload}
+                onClick={triggerDownload}
                 disabled={step === "downloading"}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-all disabled:opacity-60"
-                style={{
-                  background: "linear-gradient(135deg, #b8973a, #d9b773)",
-                  color: "#0d1117",
-                }}
+                style={{ background: "linear-gradient(135deg, #b8973a, #d9b773)", color: "#0d1117" }}
               >
                 {step === "downloading" ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Downloading…
-                  </>
+                  <><Loader2 className="size-4 animate-spin" /> Downloading…</>
                 ) : (
-                  <>
-                    <Download className="size-4" />
-                    Download Encrypted PDF
-                  </>
+                  <><Download className="size-4" /> Download Encrypted PDF</>
                 )}
               </button>
             </>
@@ -325,5 +260,39 @@ export function DownloadModal({ fileId, fileName, onClose }) {
         </div>
       </div>
     </>
+  );
+}
+
+function ErrorBox({ message }) {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-xl px-4 py-3 text-sm"
+      style={{
+        background: "rgba(239,68,68,0.08)",
+        border: "1px solid rgba(239,68,68,0.2)",
+        color: "#fca5a5",
+      }}
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      {message}
+    </div>
+  );
+}
+
+function GoldButton({ onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full rounded-2xl py-3 text-sm font-semibold transition-all"
+      style={{
+        background: "rgba(217,183,115,0.12)",
+        border: "1px solid rgba(217,183,115,0.25)",
+        color: "#d9b773",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(217,183,115,0.2)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(217,183,115,0.12)")}
+    >
+      {children}
+    </button>
   );
 }
