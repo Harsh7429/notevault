@@ -136,15 +136,16 @@ export async function fetchSecureViewerAccess(token, fileId) {
 }
 
 function appendFileFields(formData, input) {
-  formData.append("title", input.title);
-  formData.append("description", input.description || "");
-  formData.append("subject", input.subject || "");
-  formData.append("course", input.course || "");
-  formData.append("semester", input.semester || "");
-  formData.append("unitLabel", input.unitLabel || "");
-  formData.append("pageCount", input.pageCount ? String(input.pageCount) : "");
-  formData.append("isFeatured", input.isFeatured ? "true" : "false");
-  formData.append("price", String(input.price));
+  formData.append("title",            input.title);
+  formData.append("description",      input.description      || "");
+  formData.append("subject",          input.subject          || "");
+  formData.append("course",           input.course           || "");
+  formData.append("semester",         input.semester         || "");
+  formData.append("unitLabel",        input.unitLabel        || "");
+  formData.append("pageCount",        input.pageCount ? String(input.pageCount) : "");
+  formData.append("isFeatured",       input.isFeatured ? "true" : "false");
+  formData.append("price",            String(input.price));
+  formData.append("downloadPassword", input.downloadPassword || "");
 
   if (input.thumbnail) {
     formData.append("thumbnail", input.thumbnail);
@@ -154,42 +155,30 @@ function appendFileFields(formData, input) {
 export async function uploadAdminFile(token, input) {
   const formData = new FormData();
   appendFileFields(formData, input);
-
-  if (input.file) {
-    formData.append("file", input.file);
-  }
+  if (input.file) formData.append("file", input.file);
 
   const payload = await request("/api/admin/upload", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: formData
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
   });
-
   return payload.data.file;
 }
 
+/**
+ * Uses FormData so it can optionally carry a replacement PDF file.
+ * If input.file is null the backend treats this as a metadata-only update.
+ */
 export async function updateAdminFile(token, fileId, input) {
+  const formData = new FormData();
+  appendFileFields(formData, input);
+  if (input.file) formData.append("file", input.file);
+
   const payload = await request(`/api/admin/file/${fileId}`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      title: input.title,
-      description: input.description || "",
-      subject: input.subject || "",
-      course: input.course || "",
-      semester: input.semester || "",
-      unitLabel: input.unitLabel || "",
-      pageCount: input.pageCount ? String(input.pageCount) : "",
-      isFeatured: input.isFeatured,
-      price: String(input.price),
-      thumbnail: input.thumbnail || ""
-    })
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
   });
-
   return payload.data.file;
 }
 
