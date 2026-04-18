@@ -45,6 +45,7 @@ export default function ViewerPage() {
 
     async function init() {
       try {
+        // Run public + authed fetches in parallel for speed
         const [fileData, currentUser, purchases] = await Promise.all([
           fetchFileById(fileId),
           fetchCurrentUser(token),
@@ -63,44 +64,65 @@ export default function ViewerPage() {
           return;
         }
 
-        // Fetch the secure signed URL from backend
+        // ── Get the short-lived signed URL from backend ──
+        // Backend returns: { data: { viewerUrl: "...", file: {...}, deliveryMode: "signed-url" } }
         const accessData = await fetchSecureViewerAccess(token, fileId);
-        setFileUrl(accessData.url || accessData.file_url || accessData.signedUrl);
+
+        // The backend key is "viewerUrl" — do NOT use url/file_url/signedUrl
+        const url = accessData.viewerUrl;
+        if (!url) {
+          throw new Error("Viewer URL missing from server response. Please try again.");
+        }
+
+        setFileUrl(url);
         setStatus("ready");
       } catch (err) {
+        const msg = err.message || "";
         if (
-          err.message?.toLowerCase().includes("session") ||
-          err.message?.toLowerCase().includes("token")
+          msg.toLowerCase().includes("session") ||
+          msg.toLowerCase().includes("token") ||
+          msg.toLowerCase().includes("unauthorized")
         ) {
           clearStoredToken();
           router.replace(`/login?next=/viewer/${fileId}`);
           return;
         }
-        setErrorMsg(err.message || "Failed to load viewer.");
+        if (msg.toLowerCase().includes("purchase") || msg.toLowerCase().includes("403")) {
+          setStatus("forbidden");
+          return;
+        }
+        setErrorMsg(msg || "Failed to load viewer.");
         setStatus("error");
       }
     }
 
     init();
-  }, [fileId]);
+  }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Loading ──
   if (status === "loading") {
     return (
       <AppShell>
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-[70vh] items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="size-10 animate-spin" style={{ color: "#d9b773" }} />
-            <p className="text-sm" style={{ color: "#6b7280" }}>Verifying access…</p>
+            <Loader2
+              className="size-10 animate-spin"
+              style={{ color: "#d9b773" }}
+            />
+            <p className="text-sm" style={{ color: "#6b7280" }}>
+              Verifying access…
+            </p>
           </div>
         </div>
       </AppShell>
     );
   }
 
+  // ── Forbidden ──
   if (status === "forbidden") {
     return (
       <AppShell>
-        <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="flex min-h-[70vh] items-center justify-center px-4">
           <div
             className="w-full max-w-sm rounded-3xl p-8 text-center"
             style={{
@@ -110,16 +132,26 @@ export default function ViewerPage() {
             }}
           >
             <div
-              className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}
+              className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.2)",
+              }}
             >
               <Lock className="size-7" style={{ color: "#f87171" }} />
             </div>
-            <h1 className="mb-2 text-lg font-bold" style={{ color: "#f0e6cc" }}>
+            <h1
+              className="mb-2 text-lg font-bold"
+              style={{ color: "#f0e6cc" }}
+            >
               Access denied
             </h1>
-            <p className="mb-6 text-sm leading-6" style={{ color: "#6b7280" }}>
-              You haven't purchased this file. Complete the checkout to unlock the secure viewer.
+            <p
+              className="mb-6 text-sm leading-6"
+              style={{ color: "#6b7280" }}
+            >
+              You haven&apos;t purchased this file yet. Complete the checkout to
+              unlock the secure viewer.
             </p>
             <Link
               href={`/files/${fileId}`}
@@ -138,10 +170,11 @@ export default function ViewerPage() {
     );
   }
 
+  // ── Error ──
   if (status === "error") {
     return (
       <AppShell>
-        <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="flex min-h-[70vh] items-center justify-center px-4">
           <div
             className="w-full max-w-sm rounded-3xl p-8 text-center"
             style={{
@@ -151,12 +184,18 @@ export default function ViewerPage() {
             }}
           >
             <div
-              className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+              className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.2)",
+              }}
             >
               <ShieldAlert className="size-7" style={{ color: "#f87171" }} />
             </div>
-            <h1 className="mb-2 text-lg font-bold" style={{ color: "#f0e6cc" }}>
+            <h1
+              className="mb-2 text-lg font-bold"
+              style={{ color: "#f0e6cc" }}
+            >
               Something went wrong
             </h1>
             <p className="mb-6 text-sm" style={{ color: "#6b7280" }}>
@@ -179,15 +218,20 @@ export default function ViewerPage() {
     );
   }
 
+  // ── Ready ──
   return (
     <AppShell>
       <Head>
-        <title>{file?.title ? `${file.title} — NoteVault Viewer` : "NoteVault Viewer"}</title>
+        <title>
+          {file?.title
+            ? `${file.title} — NoteVault Viewer`
+            : "NoteVault Viewer"}
+        </title>
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
       <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Top bar */}
+        {/* ── Top bar ── */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link
             href={`/files/${fileId}`}
@@ -223,7 +267,7 @@ export default function ViewerPage() {
           )}
         </div>
 
-        {/* Watermark strip */}
+        {/* ── Watermark strip ── */}
         {user && (
           <div
             className="mb-3 flex items-center justify-between rounded-xl px-3 py-2 sm:px-4"
@@ -232,28 +276,47 @@ export default function ViewerPage() {
               border: "1px solid rgba(217,183,115,0.1)",
             }}
           >
-            <span className="text-[10px] sm:text-xs" style={{ color: "#4b5563" }}>
+            <span
+              className="text-[10px] sm:text-xs"
+              style={{ color: "#4b5563" }}
+            >
               Licensed to:{" "}
               <span className="font-semibold" style={{ color: "#6b7280" }}>
                 {user.email}
               </span>
             </span>
-            <span className="text-[10px] sm:text-xs" style={{ color: "#374151" }}>
-              {new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST
+            <span
+              className="text-[10px] sm:text-xs"
+              style={{ color: "#374151" }}
+            >
+              {new Date().toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata",
+              })}{" "}
+              IST
             </span>
           </div>
         )}
 
-        {/* PDF Viewer */}
-        {fileUrl && (
+        {/* ── PDF Viewer ──
+            fileUrl comes from accessData.viewerUrl (Supabase signed URL).
+            The viewer is only mounted once fileUrl is confirmed non-null. */}
+        {fileUrl ? (
           <SecurePdfViewer
             fileUrl={fileUrl}
             numPages={numPages}
             onDocumentLoadSuccess={({ numPages: n }) => setNumPages(n)}
           />
+        ) : (
+          <div className="flex items-center justify-center py-24">
+            <Loader2
+              className="size-8 animate-spin"
+              style={{ color: "#d9b773" }}
+            />
+          </div>
         )}
       </section>
 
+      {/* ── Download modal ── */}
       {showDownloadModal && file && (
         <DownloadModal
           fileId={fileId}
