@@ -12,8 +12,8 @@ import { Button }            from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { clearStoredToken, getStoredToken } from "@/lib/auth";
 import {
-  deleteAdminFile, fetchAdminSales, fetchCurrentUser,
-  fetchFiles, updateAdminFile, uploadAdminFile,
+  deleteAdminFile, fetchAdminFiles, fetchAdminSales, fetchCurrentUser,
+  updateAdminFile, uploadAdminFile,
 } from "@/lib/api";
 
 const initialValues = {
@@ -72,7 +72,7 @@ export default function AdminPage() {
   async function loadAdminData(token) {
     const [currentUser, allFiles, salesData] = await Promise.all([
       fetchCurrentUser(token),
-      fetchFiles(),
+      fetchAdminFiles(token),
       fetchAdminSales(token),
     ]);
     if (currentUser.role !== "admin") throw new Error("Admin access is required.");
