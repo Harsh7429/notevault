@@ -215,16 +215,17 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
       </div>
 
       {/* ── PDF canvas ──
-          ref={containerRef} measures the TRUE available pixel width so the
-          Page component never overflows on any screen size, including phones
-          in portrait or landscape. pageWidth stays null until the first paint
-          measurement fires — this prevents react-pdf from rendering at the
-          wrong width and then re-rendering. */}
+          The outer div carries the visual padding.
+          The INNER div (ref={containerRef}) is what we measure — it has no
+          padding, so offsetWidth == exact usable pixel width for the PDF page.
+          If we put ref on the padded outer div, offsetWidth includes the
+          padding and the Page renders wider than the visible area, clipping
+          on the right on every screen size. */}
       <div
-        ref={containerRef}
         className="select-none p-3 sm:p-6"
         style={{ background: "#0d1117", overflowX: "hidden" }}
       >
+        <div ref={containerRef}>
         {pageWidth !== null && (
           <Document
             file={fileUrl}
@@ -278,6 +279,7 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
             </div>
           </Document>
         )}
+        </div>
       </div>
 
       {/* ── Bottom nav (only shown when doc has multiple pages) ── */}
