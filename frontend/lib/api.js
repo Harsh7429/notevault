@@ -205,7 +205,19 @@ export async function fetchAdminSales(token) {
     }
   });
 
-  return payload.data;
+  // Guard against null/undefined payload.data — if the sales endpoint returns
+  // an unexpected shape, return safe defaults instead of crashing the app.
+  const data = payload?.data ?? {};
+  return {
+    totalFiles:       data.totalFiles       ?? 0,
+    featuredProducts: data.featuredProducts ?? 0,
+    subjectCount:     data.subjectCount     ?? 0,
+    totalPurchases:   data.totalPurchases   ?? 0,
+    totalRevenue:     data.totalRevenue     ?? 0,
+    uniqueBuyers:     data.uniqueBuyers     ?? 0,
+    topProducts:      Array.isArray(data.topProducts)     ? data.topProducts     : [],
+    recentPurchases:  Array.isArray(data.recentPurchases) ? data.recentPurchases : [],
+  };
 }
 
 

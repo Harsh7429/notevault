@@ -138,7 +138,14 @@ export default function AdminPage() {
         setSuccess(`Uploaded "${uploaded.title}" successfully.`);
       }
       resetForm();
-      await loadAdminData(getStoredToken());
+      // Wrap the reload in its own try/catch so a stats-fetch failure
+      // does not crash the app after a successful save.
+      try {
+        await loadAdminData(getStoredToken());
+      } catch (reloadErr) {
+        console.warn("[Admin] Data reload after save failed:", reloadErr.message);
+        // Still show success — the save itself worked fine.
+      }
     } catch (err) {
       setError(err.message);
     } finally {
