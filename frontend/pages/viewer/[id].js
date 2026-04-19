@@ -16,6 +16,7 @@ import { SecurePdfViewer } from "@/components/viewer/secure-pdf-viewer";
 import { clearStoredToken, getStoredToken } from "@/lib/auth";
 import {
   fetchCurrentUser,
+  fetchDownloadPassword,
   fetchFileById,
   fetchMyPurchases,
   fetchSecureViewerAccess,
@@ -29,6 +30,7 @@ export default function ViewerPage() {
   const [status, setStatus] = useState("loading"); // loading | ready | forbidden | error
   const [file, setFile] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
+  const [pdfPassword, setPdfPassword] = useState(null); // null = no password
   const [user, setUser] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -64,9 +66,11 @@ export default function ViewerPage() {
           return;
         }
 
-        // ── Get the short-lived signed URL from backend ──
-        // Backend returns: { data: { viewerUrl: "...", file: {...}, deliveryMode: "signed-url" } }
-        const accessData = await fetchSecureViewerAccess(token, fileId);
+        // ── Get the short-lived signed URL + password in parallel ──
+        const [accessData, pwData] = await Promise.all([
+          fetchSecureViewerAccess(token, fileId),
+          fetchDownloadPassword(token, fileId).catch(() => ({ hasPassword: false })),
+        ]);
 
         // The backend key is "viewerUrl" — do NOT use url/file_url/signedUrl
         const url = accessData.viewerUrl;
@@ -75,9 +79,35 @@ export default function ViewerPage() {
         }
 
         setFileUrl(url);
+        // Only set the password if the file actually has one.
+        // This is passed to SecurePdfViewer so pdfjs can open it without
+        // triggering the browser's native "Enter PDF password" dialog.
+        if (pwData?.hasPassword && pwData?.password) {
+          setPdfPassword(pwData.password);
+        }
         setStatus("ready");
       } catch (err) {
         const msg = err.message || "";
+        if (
+          msg.toLowerCase().includes("session") ||
+          msg.toLowerCase().includes("token") ||
+          msg.toLowerCase().includes("unauthorized")
+        ) {
+          clearStoredToken();
+          router.replace(`/login?next=/viewer/${fileId}`);
+          return;
+        }
+        if (msg.toLowerCase().includes("purchase") || msg.toLowerCase().includes("403")) {
+          setStatus("forbidden");
+          return;
+        }
+        setErrorMsg(msg || "Failed to load viewer.");
+        setStatus("error");
+      }
+    }
+
+    init();
+  }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
         if (
           msg.toLowerCase().includes("session") ||
           msg.toLowerCase().includes("token") ||
@@ -300,10 +330,12 @@ export default function ViewerPage() {
 
         {/* ── PDF Viewer ──
             fileUrl comes from accessData.viewerUrl (Supabase signed URL).
-            The viewer is only mounted once fileUrl is confirmed non-null. */}
+            pdfPassword is fetched alongside so pdfjs can open encrypted files
+            without triggering the browser's native password dialog. */}
         {fileUrl ? (
           <SecurePdfViewer
             fileUrl={fileUrl}
+            pdfPassword={pdfPassword}
             numPages={numPages}
             onDocumentLoadSuccess={({ numPages: n }) => setNumPages(n)}
           />

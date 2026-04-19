@@ -48,7 +48,7 @@ const PDF_OPTIONS = {
 
 const MIN_WIDTH = 280; // px — absolute floor for ultra-narrow phones
 
-export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
+export function SecurePdfViewer({ fileUrl, pdfPassword, onDocumentLoadSuccess, numPages }) {
   // ref goes on the INNER wrapper — the element whose clientWidth is the
   // true available canvas width (margins are outside the box, so offsetWidth
   // here already excludes them).
@@ -226,6 +226,19 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
                   </p>
                 </div>
               }
+              // KEY FIX: when pdfjs encounters a password-protected file it calls
+              // onPassword(callback, reason). We immediately supply the pre-fetched
+              // password so the file opens silently — no browser dialog ever appears.
+              // If no password was provided (pdfPassword is null) we intentionally
+              // do NOT call updatePassword, which causes pdfjs to show the error
+              // state instead of the browser's native popup.
+              onPassword={(updatePassword, reason) => {
+                if (pdfPassword) {
+                  updatePassword(pdfPassword);
+                }
+                // If reason === 2 (wrong password) or no password available,
+                // we do nothing — pdfjs will show the error fallback above.
+              }}
               onLoadSuccess={(payload) => {
                 onDocumentLoadSuccess(payload);
                 setCurrentPage(1);
