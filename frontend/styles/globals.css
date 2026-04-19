@@ -18,20 +18,25 @@
 
 html {
   scroll-behavior: smooth;
-  /* Prevent horizontal overflow on mobile */
   overflow-x: hidden;
+  /* iOS momentum scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  /* Full-bleed on iOS including safe areas */
+  min-height: -webkit-fill-available;
   background: var(--base-cream);
   color: var(--ink-900);
   font-family: "Manrope", sans-serif;
   overflow-x: hidden;
-  /* Improve text rendering on mobile */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Safe-area padding for iPhone notch / home bar */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 * {
@@ -46,15 +51,30 @@ select {
   font: inherit;
 }
 
-/* CRITICAL: Prevent iOS Safari from zooming into inputs/selects on focus.
-   iOS zooms in when font-size < 16px. This rule ensures all form elements
-   are at least 16px on mobile without changing desktop appearance. */
+/* CRITICAL: Prevent iOS Safari from zooming into focused inputs */
 @media (max-width: 767px) {
   input,
   select,
   textarea {
     font-size: 16px !important;
   }
+}
+
+/* Minimum touch target size — 44×44px per Apple HIG */
+button,
+[role="button"],
+a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Override for decorative/text-only links that shouldn't be taller */
+a.no-min-h,
+span > a,
+p > a {
+  min-height: unset;
+  display: inline;
 }
 
 a {
