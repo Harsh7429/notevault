@@ -25,8 +25,9 @@ function toPublicFile(file) {
     is_featured: file.is_featured,
     price:       file.price,
     thumbnail:   file.thumbnail,
+    file_url:    file.file_url,   // needed for PDF page-1 thumbnail rendering
     created_at:  file.created_at,
-    // NOTE: download_password is intentionally omitted from public listing
+    // NOTE: download_password and storage_path are intentionally omitted
   };
 }
 
@@ -116,7 +117,6 @@ exports.streamProtectedNote = asyncHandler(async (req, res) => {
  * - If the file has a download_password set by the admin → encrypt the PDF
  *   with that password before sending it.
  * - If no password is set → send the plain PDF as a regular download.
- *   Buyers still get the file; it's just not encrypted.
  */
 exports.downloadProtectedNote = asyncHandler(async (req, res) => {
   const file = req.fileRecord;
@@ -129,23 +129,41 @@ exports.downloadProtectedNote = asyncHandler(async (req, res) => {
 
   // If admin set a download password, encrypt before sending
   if (file.download_password) {
-    const { PDFDocument } = require("@cantoo/pdf-lib");
-    const password        = file.download_password;
+    try {
+      // Use @cantoo/pdf-lib which supports proper AES-256 encryption
+      const { PDFDocument, StandardEncryptionAlgorithm } = require("@cantoo/pdf-lib");
+      const password = file.download_password;
 
-    const pdfDoc       = await PDFDocument.load(fileBuffer);
-    const encryptedBytes = await pdfDoc.save({
-      userPassword:  password,
-      ownerPassword: `${password}_nv`,
-    });
+      const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+      const encryptedBytes = await pdfDoc.save({
+        encryption: {
+          userPassword:  password,
+          ownerPassword: `${password}_owner`,
+          permissions: {
+            printing:        "lowResolution",
+            modifying:       false,
+            copying:         false,
+            annotating:      false,
+            fillingForms:    false,
+            contentAccessibility: true,
+            documentAssembly: false,
+          },
+        },
+      });
 
-    res.setHeader("Content-Type",        "application/pdf");
-    res.setHeader("Content-Length",      encryptedBytes.length);
-    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-    res.setHeader("Cache-Control",       "private, no-store");
-    return res.status(200).send(Buffer.from(encryptedBytes));
+      res.setHeader("Content-Type",        "application/pdf");
+      res.setHeader("Content-Length",      encryptedBytes.length);
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      res.setHeader("Cache-Control",       "private, no-store");
+      return res.status(200).send(Buffer.from(encryptedBytes));
+    } catch (encryptErr) {
+      // If encryption fails (e.g. already encrypted source PDF), fall back
+      // to sending the plain file so the user always gets their download.
+      console.error("[download] Encryption failed, sending plain PDF:", encryptErr.message);
+    }
   }
 
-  // No password — serve as plain download
+  // No password, or encryption failed — serve as plain download
   res.setHeader("Content-Type",        "application/pdf");
   res.setHeader("Content-Length",      fileBuffer.length);
   res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);

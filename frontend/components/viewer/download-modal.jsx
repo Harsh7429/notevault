@@ -43,8 +43,9 @@ export function DownloadModal({ fileId, fileName, onClose }) {
         setStep("ready");           // show the password before downloading
       } else {
         setHasPassword(false);
-        // No password set — go straight to download
-        await triggerDownload();
+        // No password set — go straight to download, passing false explicitly
+        // so triggerDownload doesn't read the stale hasPassword state closure.
+        await triggerDownload(false);
       }
     } catch (err) {
       setError(err.message || "Failed to prepare download.");
@@ -53,7 +54,8 @@ export function DownloadModal({ fileId, fileName, onClose }) {
   }
 
   // ── Step 2: download ──────────────────────────────────────────────────────
-  async function triggerDownload() {
+  // wasPassword is passed explicitly to avoid stale React state closure issues.
+  async function triggerDownload(wasPassword = hasPassword) {
     setStep("downloading");
     setError("");
     try {
@@ -89,14 +91,14 @@ export function DownloadModal({ fileId, fileName, onClose }) {
       setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
 
       // Stay on "ready" if there was a password to show; otherwise close
-      if (hasPassword) {
+      if (wasPassword) {
         setStep("ready");
       } else {
         onClose();
       }
     } catch (err) {
       setError(err.message || "Download failed. Please try again.");
-      setStep(hasPassword ? "ready" : "confirm");
+      setStep(wasPassword ? "ready" : "confirm");
     }
   }
 
@@ -244,7 +246,7 @@ export function DownloadModal({ fileId, fileName, onClose }) {
 
               {/* Download button */}
               <button
-                onClick={triggerDownload}
+                onClick={() => triggerDownload(true)}
                 disabled={step === "downloading"}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-all disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #b8973a, #d9b773)", color: "#0d1117" }}
