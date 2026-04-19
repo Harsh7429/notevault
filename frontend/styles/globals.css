@@ -86,6 +86,23 @@ canvas {
   display: block;
 }
 
+/* react-pdf: prevent canvas from ever exceeding its container width.
+   Without this, on mobile the PDF canvas can render at its natural
+   PDF width (e.g. 595px for A4) and overflow the viewport. */
+.react-pdf__Page,
+.react-pdf__Page__canvas,
+.react-pdf__Page__textContent {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+.react-pdf__Page__canvas {
+  /* Canvas must scale down on narrow screens */
+  max-width: 100% !important;
+  height: auto !important;
+}
+
 ::selection {
   background: rgba(95, 111, 82, 0.2);
   color: #11110f;

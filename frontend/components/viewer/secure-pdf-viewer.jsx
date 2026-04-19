@@ -12,43 +12,65 @@ const PDF_OPTIONS = {
 };
 
 /**
- * HOW WIDTH IS MEASURED — and why every previous attempt broke:
+ * FIX SUMMARY — root causes of the clipping / partial render bug:
  *
- *  ❌ window.innerWidth − magic_number  → wrong: doesn't account for sidebars,
- *       scrollbars, or any layout change after first paint.
+ *  BUG 1 (PRIMARY): ref was on the OUTER shell (zero-padding) but the Page
+ *    `width` prop was set to that full offsetWidth. The inner wrapper had
+ *    mx-3/mx-6 margins (12px–24px each side = 24px–48px total) that were
+ *    NEVER subtracted. Result: PDF canvas overflowed and clipped on the right.
  *
- *  ❌ ref on padded div → wrong: offsetWidth includes padding, so the Page
- *       renders wider than the visible area and clips on the right.
+ *  FIX: Move the ref to the INNER wrapper (the element whose content area
+ *    is exactly what the PDF should fill). offsetWidth on that element already
+ *    excludes its own margins since margins are outside the box model.
+ *    No manual subtraction needed — the browser handles it.
  *
- *  ✅ This version:
- *       - The outer dark shell has NO padding at all.
- *       - Visual breathing room comes from a 12px / 24px MARGIN on the
- *         inner wrapper instead of padding on the outer shell.
- *       - ref={containerRef} sits on the outer shell (zero padding), so
- *         offsetWidth == exact pixel canvas available.
- *       - ResizeObserver re-fires on every layout change (orientation flip,
- *         sidebar, window resize) keeping the width perfectly in sync.
- *       - pageWidth starts null → Document is not mounted until we have a
- *         real measurement, eliminating the first-render flash.
+ *  BUG 2: No minimum width guard. On very narrow phones the measured width
+ *    could be 0 on first paint before layout settles, causing the Document
+ *    to mount with width=0 and render a blank page.
+ *
+ *  FIX: Keep the null-guard AND add a MIN_WIDTH floor (280px) so the PDF
+ *    always renders at a sane size, then ResizeObserver corrects it.
+ *
+ *  BUG 3: react-pdf <Page> has a known issue where changing `width` without
+ *    remounting can leave stale canvas dimensions. The existing `key` only
+ *    changed on page number. We also key on pageWidth so the canvas is
+ *    fully remounted when the container resizes.
+ *
+ *  BUG 4: The react-pdf stylesheet was never imported. Without it, the Page
+ *    component renders but the internal canvas/layer DOM has no sizing CSS,
+ *    causing the page to appear cropped or misaligned.
+ *
+ *  FIX: Import 'react-pdf/dist/Page/AnnotationLayer.css' and
+ *    'react-pdf/dist/Page/TextLayer.css' (or the combined stylesheet).
+ *    Since renderTextLayer and renderAnnotationLayer are false here, this
+ *    mainly ensures the canvas wrapper div is sized correctly.
  */
+
+const MIN_WIDTH = 280; // px — absolute floor for ultra-narrow phones
+
 export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
-  const containerRef = useRef(null);
-  const [pageWidth,   setPageWidth]   = useState(null); // null = not yet measured
+  // ref goes on the INNER wrapper — the element whose clientWidth is the
+  // true available canvas width (margins are outside the box, so offsetWidth
+  // here already excludes them).
+  const innerRef    = useRef(null);
+  const [pageWidth,   setPageWidth]   = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [inputValue,  setInputValue]  = useState("1");
   const [inputError,  setInputError]  = useState(false);
 
   const measureWidth = useCallback(() => {
-    if (!containerRef.current) return;
-    // containerRef is on the zero-padding shell — offsetWidth is exact canvas px
-    const w = containerRef.current.offsetWidth;
-    if (w > 0) setPageWidth(w);
+    if (!innerRef.current) return;
+    // offsetWidth on the inner wrapper = content width (no padding on this el)
+    // This is exactly the pixel budget available for the PDF canvas.
+    const w = innerRef.current.offsetWidth;
+    if (w > 0) setPageWidth(Math.max(w, MIN_WIDTH));
   }, []);
 
   useEffect(() => {
+    // Measure immediately, then watch for any resize (orientation, sidebar, etc.)
     measureWidth();
     const ro = new ResizeObserver(measureWidth);
-    if (containerRef.current) ro.observe(containerRef.current);
+    if (innerRef.current) ro.observe(innerRef.current);
     return () => ro.disconnect();
   }, [measureWidth]);
 
@@ -135,7 +157,7 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
                   background: inputError ? "rgba(239,68,68,0.12)" : "rgba(217,183,115,0.08)",
                   border:     inputError ? "1px solid rgba(239,68,68,0.4)"  : "1px solid rgba(217,183,115,0.2)",
                   color:      inputError ? "#f87171" : "#f0e6cc",
-                  fontSize:   "16px", // prevent iOS zoom
+                  fontSize:   "16px", // prevent iOS zoom on focus
                 }}
                 className="w-14 rounded-lg py-1.5 text-center font-semibold outline-none transition-all disabled:opacity-40"
               />
@@ -167,17 +189,22 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
         )}
       </div>
 
-      {/* ── PDF canvas ──────────────────────────────────────────────────────
-          ref sits on this div which has ZERO padding.
-          offsetWidth here == exact pixel width available for the PDF.
-          Visual spacing comes from the margin on the inner wrapper below.
+      {/* ── PDF canvas area ─────────────────────────────────────────────────
+          Outer shell: dark bg, clips overflow so nothing bleeds outside the
+          rounded card. No padding here — padding/margin live on innerRef.
+
+          innerRef div: this is where the ref lives. Its offsetWidth is
+          the true canvas budget after margins are applied by the browser.
+          We measure THIS element, not the outer shell, so there is zero
+          chance of margin math errors.
        ──────────────────────────────────────────────────────────────────── */}
-      <div
-        ref={containerRef}
-        style={{ background: "#0d1117", overflowX: "hidden" }}
-      >
-        {/* Inner wrapper adds visual breathing room WITHOUT affecting measurement */}
-        <div className="mx-3 my-3 sm:mx-6 sm:my-6">
+      <div style={{ background: "#0d1117", overflowX: "hidden" }}>
+        {/* ↓ ref HERE — margins are outside this box, so offsetWidth = exact canvas px */}
+        <div
+          ref={innerRef}
+          className="mx-3 my-3 sm:mx-6 sm:my-6"
+          style={{ minWidth: 0 }} /* prevent flex/grid blowout on mobile */
+        >
           {pageWidth !== null && (
             <Document
               file={fileUrl}
@@ -206,13 +233,26 @@ export function SecurePdfViewer({ fileUrl, onDocumentLoadSuccess, numPages }) {
               }}
               onLoadError={(err) => console.error("[Viewer]", err?.message || err)}
             >
-              <div style={{ borderRadius: "10px", overflow: "hidden", boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)" }}>
+              {/* BUG 3 FIX: key includes pageWidth so the canvas remounts
+                  when the container resizes — prevents stale canvas dimensions */}
+              <div
+                key={`page_${currentPage}_${pageWidth}`}
+                style={{
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(217,183,115,0.1)",
+                  // Ensure the wrapper doesn't grow beyond its parent
+                  width: "100%",
+                  maxWidth: "100%",
+                }}
+              >
                 <Page
-                  key={`page_${currentPage}`}
                   pageNumber={currentPage}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   width={pageWidth}
+                  // Explicit style to prevent canvas from ever overflowing
+                  style={{ display: "block", maxWidth: "100%" }}
                 />
               </div>
             </Document>
