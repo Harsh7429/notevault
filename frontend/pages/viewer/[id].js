@@ -108,26 +108,6 @@ export default function ViewerPage() {
 
     init();
   }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
-        if (
-          msg.toLowerCase().includes("session") ||
-          msg.toLowerCase().includes("token") ||
-          msg.toLowerCase().includes("unauthorized")
-        ) {
-          clearStoredToken();
-          router.replace(`/login?next=/viewer/${fileId}`);
-          return;
-        }
-        if (msg.toLowerCase().includes("purchase") || msg.toLowerCase().includes("403")) {
-          setStatus("forbidden");
-          return;
-        }
-        setErrorMsg(msg || "Failed to load viewer.");
-        setStatus("error");
-      }
-    }
-
-    init();
-  }, [fileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Loading ──
   if (status === "loading") {
