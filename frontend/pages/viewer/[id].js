@@ -228,9 +228,10 @@ export default function ViewerPage() {
             : "NoteVault Viewer"}
         </title>
         <meta name="robots" content="noindex,nofollow" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
 
-      <section className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-4xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         {/* ── Top bar ── */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <Link
