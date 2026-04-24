@@ -16,7 +16,7 @@ import {
   previewProducts,
   trustPoints,
 } from "@/data/notevaultHomeData";
-import { fetchFiles }     from "@/lib/api";
+import { fetchAllFiles }     from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
 
 function pickFeatured(files) {
@@ -48,7 +48,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setHasToken(Boolean(getStoredToken()));
-    fetchFiles()
+    fetchAllFiles()
       .then(setFiles)
       .catch(() => setFiles([]))
       .finally(() => setLoadingFiles(false));

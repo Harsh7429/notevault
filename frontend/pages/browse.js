@@ -7,7 +7,7 @@ import { EmptyState }       from "@/components/empty-state";
 import { FileCard }         from "@/components/file-card";
 import { FileCardSkeleton } from "@/components/file-card-skeleton";
 import { Button }           from "@/components/ui/button";
-import { fetchFiles, fetchMyPurchases } from "@/lib/api";
+import { fetchAllFiles, fetchMyPurchases } from "@/lib/api";
 import { getStoredToken }   from "@/lib/auth";
 
 function normalizeValue(value) {
@@ -68,7 +68,7 @@ export default function BrowsePage() {
       setLoading(true);
       setError("");
       const token = getStoredToken();
-      const reqs  = [fetchFiles()];
+      const reqs  = [fetchAllFiles()];
       if (token) reqs.push(fetchMyPurchases(token));
       const [fileData, purchaseData = []] = await Promise.all(reqs);
       setFiles(fileData);

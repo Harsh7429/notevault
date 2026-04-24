@@ -26,9 +26,30 @@ async function request(path, options = {}) {
   return payload;
 }
 
-export async function fetchFiles() {
-  const payload = await request("/api/files");
-  return payload.data || [];
+export async function fetchFiles({ page = 1, limit = 50, search = "", subject = "" } = {}) {
+  const params = new URLSearchParams();
+  params.set("page",  String(page));
+  params.set("limit", String(limit));
+  if (search)  params.set("search",  search);
+  if (subject) params.set("subject", subject);
+  const payload = await request(`/api/files?${params.toString()}`);
+  return payload;   // return full payload (data + pagination) so callers can paginate if needed
+}
+
+export async function fetchAllFiles() {
+  // Convenience wrapper: fetches all pages and concatenates results.
+  // Uses the backend max page size (50) to minimise round-trips.
+  const PAGE_SIZE = 50;
+  let page = 1;
+  let allItems = [];
+  while (true) {
+    const payload = await fetchFiles({ page, limit: PAGE_SIZE });
+    const items = payload.data || [];
+    allItems = allItems.concat(items);
+    if (page >= (payload.pagination?.totalPages || 1)) break;
+    page++;
+  }
+  return allItems;
 }
 
 export async function fetchFileById(id) {
@@ -45,6 +66,10 @@ export async function registerUser(input) {
   return payload.data;
 }
 
+// ⚠️  DEAD CODE — backend routes /api/register/verify-otp and /api/login/verify-otp
+// are NOT wired up in auth.routes.js. The OTP service exists in
+// backend/src/services/login-otp.service.js but routes + frontend form are missing.
+// Do not call these until the backend routes and a UI OTP form are added.
 export async function verifyRegistrationOtp(input) {
   const payload = await request("/api/register/verify-otp", {
     method: "POST",
@@ -63,6 +88,7 @@ export async function loginUser(input) {
   return payload.data;
 }
 
+// ⚠️  DEAD CODE — see note above on verifyRegistrationOtp.
 export async function verifyLoginOtp(input) {
   const payload = await request("/api/login/verify-otp", {
     method: "POST",

@@ -57,7 +57,8 @@ export default function ViewerPage() {
         setFile(fileData);
         setUser(currentUser);
 
-        const owned = purchases.some(
+        const isAdmin = currentUser?.role === "admin";
+        const owned = isAdmin || purchases.some(
           (p) => Number(p.file_id) === Number(fileId)
         );
 

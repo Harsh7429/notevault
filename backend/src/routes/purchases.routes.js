@@ -3,7 +3,7 @@ const express = require("express");
 const purchasesController = require("../controllers/purchases.controller");
 
 const { authenticate } = require("../middleware/authenticate");
-const { authLimiter, paymentLimiter } = require("../middleware/rate-limit");
+const { paymentLimiter } = require("../middleware/rate-limit");
 
 const purchasesRouter = express.Router();
 

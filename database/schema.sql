@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS files (
   file_url TEXT NOT NULL,
   storage_path TEXT NOT NULL,
   thumbnail TEXT,
+  -- Optional plaintext password set by admin. When present, downloaded PDFs are
+  -- AES-encrypted with this password. NULL means the download is served as plain PDF.
+  download_password TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

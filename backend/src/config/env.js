@@ -76,7 +76,9 @@ function getMailFrom() {
 }
 
 function isEmailConfigured() {
-  return Boolean(getSmtpUser() && getSmtpPass());
+  // The mailer delegates to Resend (resend.service.js), not nodemailer/SMTP.
+  // Check for RESEND_API_KEY — the SMTP vars are unused and should not gate emails.
+  return Boolean(process.env.RESEND_API_KEY);
 }
 
 module.exports = {

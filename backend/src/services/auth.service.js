@@ -67,8 +67,8 @@ function signToken(user) {
 }
 
 async function createSession({ userId, deviceId, token }) {
-  await query("DELETE FROM sessions WHERE user_id = $1", [userId]);
-
+  // NOTE: callers (login/register) are responsible for deleting existing sessions
+  // before calling this function. Do NOT add a DELETE here to avoid double deletes.
   const result = await query(
     `INSERT INTO sessions (user_id, device_id, token)
      VALUES ($1, $2, $3)

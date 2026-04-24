@@ -1,4 +1,7 @@
 const createError = require("http-errors");
+// @cantoo/pdf-lib supports AES-256 PDF encryption (unlike the vanilla pdf-lib).
+// Required at the top so missing-module errors surface at startup, not at download time.
+const { PDFDocument } = require("@cantoo/pdf-lib");
 
 const {
   downloadFileBuffer,
@@ -131,7 +134,6 @@ exports.downloadProtectedNote = asyncHandler(async (req, res) => {
   if (file.download_password) {
     try {
       // Use @cantoo/pdf-lib which supports proper AES-256 encryption
-      const { PDFDocument, StandardEncryptionAlgorithm } = require("@cantoo/pdf-lib");
       const password = file.download_password;
 
       const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });

@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 
 import { clearStoredToken, getStoredToken } from "@/lib/auth";
+import { logoutUser } from "@/lib/api";
 
 const guestNavItems = [
   { href: "/",         label: "Home" },
@@ -34,10 +35,16 @@ export function AppShell({ children }) {
     [hasToken]
   );
 
-  function handleLogout() {
+  async function handleLogout() {
+    const token = getStoredToken();
+    // Always clear the local token first so the UI updates immediately.
     clearStoredToken();
     setHasToken(false);
     setMenuOpen(false);
+    // Best-effort server-side session invalidation — don't block navigation on failure.
+    if (token) {
+      try { await logoutUser(token); } catch (_) { /* ignore */ }
+    }
     router.push("/login");
   }
 

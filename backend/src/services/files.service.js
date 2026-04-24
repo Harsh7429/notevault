@@ -108,8 +108,8 @@ async function updateFileRecord(
     storagePath,                // only set on PDF replacement
   }
 ) {
-  // Build a dynamic SET clause so we only touch file_url / storage_path
-  // when a replacement was actually uploaded (avoids wiping them with NULL).
+  // Build a dynamic SET clause so we only touch file_url / storage_path / thumbnail
+  // when they were actually provided (avoids wiping existing values with NULL).
   const sets = [
     "title         = $2",
     "description   = $3",
@@ -120,14 +120,20 @@ async function updateFileRecord(
     "page_count    = $8",
     "is_featured   = $9",
     "price         = $10",
-    "thumbnail     = $11",
-    "download_password = $12",
+    "download_password = $11",
   ];
   const values = [
     id, title, description, subject, course, semester, unitLabel,
-    pageCount, isFeatured, price, thumbnail,
+    pageCount, isFeatured, price,
     downloadPassword !== undefined ? (downloadPassword || null) : null,
   ];
+
+  // Only overwrite thumbnail when a non-empty value is explicitly provided.
+  // Leaving the field blank in the admin form should NOT wipe an existing thumbnail.
+  if (thumbnail) {
+    values.push(thumbnail);
+    sets.push(`thumbnail = $${values.length}`);
+  }
 
   if (fileUrl && storagePath) {
     values.push(fileUrl, storagePath);

@@ -50,6 +50,8 @@ exports.register = asyncHandler(async (req, res) => {
   const createdUser = await createUser({ name, email, password, deviceId });
   const token = signToken(createdUser);
 
+  // Clear any stale sessions for this user before issuing a fresh one
+  await deleteSessionsByUserId(createdUser.id);
   await createSession({ userId: createdUser.id, deviceId, token });
 
   res.status(201).json({
