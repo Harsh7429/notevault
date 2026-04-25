@@ -124,14 +124,14 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Stats — 3 col on all screen sizes but smaller text on mobile */}
+              {/* Stats */}
               <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 {heroStats.map((item) => (
-                  <div key={item.label} className="market-card rounded-2xl p-3 sm:rounded-[1.5rem] sm:p-5">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#7a7368] sm:text-xs sm:tracking-[0.28em]">
+                  <div key={item.label} className="market-card rounded-xl p-2.5 sm:rounded-[1.5rem] sm:p-5">
+                    <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7a7368] sm:text-xs sm:tracking-[0.28em]">
                       {item.label}
                     </div>
-                    <div className="mt-2 text-2xl font-semibold text-[#171511] sm:mt-3 sm:text-3xl">
+                    <div className="mt-1.5 text-xl font-semibold text-[#171511] sm:mt-3 sm:text-3xl">
                       {item.value}
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function HomePage() {
 
         {/* ── HOW IT WORKS ── */}
         <section className="px-4 py-10 sm:px-8 sm:py-16 lg:px-10 lg:py-20">
-          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start lg:gap-8">
+          <div className="mx-auto grid max-w-7xl gap-6 sm:gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
             <div className="market-card rounded-[2rem] p-6 sm:rounded-[2.2rem] sm:p-10">
               <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#7a7368]">How it works</div>
               <h2 className="mt-3 font-heading text-3xl text-[#171511] sm:text-4xl lg:text-5xl">
@@ -367,7 +367,6 @@ export default function HomePage() {
                   Admin management in the back. Student buying in the front.
                 </h2>
               </div>
-              {/* ← FIXED: was sm:grid-cols-3 which cramped phones at 640px */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {featureColumns.map((col) => (
                   <div key={col.title} className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-4 sm:rounded-[1.8rem] sm:p-5">

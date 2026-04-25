@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: notevault-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # qpdf is used for lossless PDF encryption (preserves background colours).
+    # Without it the server falls back to @cantoo/pdf-lib which works but is
+    # slightly less faithful for complex PDFs (patterns, form XObjects, etc.).
+    # See: backend/src/controllers/files.controller.js → encryptPdfLossless()
+    nativePackages:
+      - qpdf

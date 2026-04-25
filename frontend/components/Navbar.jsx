@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 
 import { clearStoredToken, getStoredToken } from "@/lib/auth";
+import { logoutUser } from "@/lib/api";
 
 const guestNavItems = [
   { href: "/", label: "Home" },
@@ -34,10 +35,14 @@ export function Navbar({ scrollYProgress }) {
 
   const navItems = useMemo(() => (hasToken ? signedInNavItems : guestNavItems), [hasToken]);
 
-  function handleLogout() {
+  async function handleLogout() {
+    const token = getStoredToken();
     clearStoredToken();
     setHasToken(false);
     setMenuOpen(false);
+    if (token) {
+      try { await logoutUser(token); } catch (_) { /* ignore */ }
+    }
     router.push("/login");
   }
 

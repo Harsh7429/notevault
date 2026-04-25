@@ -177,7 +177,7 @@ export default function AdminPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7a7368]">Admin panel</p>
-              <h1 className="mt-3 font-heading text-4xl text-[#171511] sm:text-5xl">
+              <h1 className="mt-3 font-heading text-3xl text-[#171511] sm:text-4xl lg:text-5xl">
                 Upload and manage your note products
               </h1>
             </div>
@@ -201,12 +201,12 @@ export default function AdminPage() {
               <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
                 {/* ── Upload / Edit form ── */}
                 <Card>
-                  <CardContent className="space-y-6 p-8">
+                  <CardContent className="space-y-6 p-5 sm:p-8">
                     <div className="inline-flex rounded-2xl bg-[#eff4ea] p-3 text-[#5f6f52]">
                       {isEdit ? <PencilLine className="size-6" /> : <UploadCloud className="size-6" />}
                     </div>
                     <div>
-                      <h2 className="text-3xl font-semibold text-[#171511]">
+                      <h2 className="text-2xl font-semibold text-[#171511] sm:text-3xl">
                         {isEdit ? "Edit note product" : "Add a new note product"}
                       </h2>
                       <p className="mt-2 text-[#5a5449]">
@@ -242,7 +242,7 @@ export default function AdminPage() {
                       </div>
 
                       {/* Semester / Unit / Pages */}
-                      <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <label className="block space-y-2">
                           <span className="text-sm font-medium text-[#3f3a31]">Semester</span>
                           <input name="semester" value={values.semester} onChange={handleChange} className={inputCls} placeholder="Semester 3" />
@@ -360,7 +360,7 @@ export default function AdminPage() {
                         <FolderKanban className="size-6" />
                       </div>
                       <h3 className="text-2xl font-semibold text-[#171511]">Sales overview</h3>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                         {[
                           ["Uploaded products",  sales.totalFiles      ?? files.length],
                           ["Featured products",  sales.featuredProducts ?? 0],
@@ -369,9 +369,9 @@ export default function AdminPage() {
                           ["Unique buyers",      sales.uniqueBuyers     ?? 0],
                           ["Subjects covered",   sales.subjectCount     ?? 0],
                         ].map(([label, val]) => (
-                          <div key={label} className="rounded-[1.6rem] border border-[#171511]/8 bg-white p-5">
-                            <div className="text-sm text-[#7a7368]">{label}</div>
-                            <div className="mt-2 text-3xl font-semibold text-[#171511]">{val}</div>
+                          <div key={label} className="rounded-[1.6rem] border border-[#171511]/8 bg-white p-4 sm:p-5">
+                            <div className="text-xs text-[#7a7368] sm:text-sm">{label}</div>
+                            <div className="mt-1.5 text-2xl font-semibold text-[#171511] sm:mt-2 sm:text-3xl">{val}</div>
                           </div>
                         ))}
                       </div>
@@ -433,10 +433,10 @@ export default function AdminPage() {
 
               {/* ── File list ── */}
               <Card>
-                <CardContent className="space-y-6 p-8">
+                <CardContent className="space-y-5 p-5 sm:space-y-6 sm:p-8">
                   <div>
-                    <h2 className="text-3xl font-semibold text-[#171511]">Uploaded files</h2>
-                    <p className="mt-2 text-[#5a5449]">This list comes from the same catalog your users browse.</p>
+                    <h2 className="text-2xl font-semibold text-[#171511] sm:text-3xl">Uploaded files</h2>
+                    <p className="mt-2 text-sm text-[#5a5449] sm:text-base">This list comes from the same catalog your users browse.</p>
                   </div>
 
                   {files.length === 0 ? (
@@ -448,64 +448,70 @@ export default function AdminPage() {
                       {files.map((file) => (
                         <div
                           key={file.id}
-                          className="grid gap-4 rounded-[1.7rem] border border-[#171511]/8 bg-white p-5 lg:grid-cols-[160px_1fr_auto_auto_auto] lg:items-center"
+                          className="rounded-[1.7rem] border border-[#171511]/8 bg-white p-4 sm:p-5"
                         >
-                          <div className="overflow-hidden rounded-[1.2rem] border border-[#171511]/8 bg-[#f8f2e9]">
-                            <div className="aspect-[4/3]">
-                              <PdfThumbnail
-                                fileUrl={file.file_url}
-                                thumbnail={file.thumbnail}
-                                alt={file.title}
-                                className="h-full w-full object-cover"
-                                fallbackLabel="Page 1 preview"
-                              />
+                          {/* ── Two-column thumbnail + content ── */}
+                          <div className="grid grid-cols-[100px_1fr] gap-4 sm:grid-cols-[130px_1fr]">
+                            <div className="overflow-hidden rounded-[1.2rem] border border-[#171511]/8 bg-[#f8f2e9]">
+                              <div className="aspect-[4/3]">
+                                <PdfThumbnail
+                                  fileUrl={file.file_url}
+                                  thumbnail={file.thumbnail}
+                                  alt={file.title}
+                                  className="h-full w-full object-cover"
+                                  fallbackLabel="Page 1 preview"
+                                />
+                              </div>
                             </div>
-                          </div>
 
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#7a7368]">
-                              <span>File #{file.id}</span>
-                              {file.is_featured && (
-                                <span className="rounded-full bg-[#171511] px-3 py-1 text-[10px] tracking-[0.18em] text-[#fffdf8]">
-                                  Featured
-                                </span>
-                              )}
-                              {/* Show a lock badge if a download password is set */}
-                              {file.download_password && (
-                                <span className="flex items-center gap-1 rounded-full border border-[#5f6f52]/20 bg-[#eff4ea] px-3 py-1 text-[10px] tracking-[0.18em] text-[#5f6f52]">
-                                  <KeyRound className="size-3" />
-                                  Password protected
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-2 text-xl font-semibold text-[#171511]">{file.title}</div>
-                            <div className="mt-2 text-sm text-[#5a5449]">{file.description || "No description added yet."}</div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {[file.subject, file.course, file.semester, file.unit_label]
-                                .filter(Boolean)
-                                .map((item) => (
-                                  <span key={`${file.id}-${item}`} className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">
-                                    {item}
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#7a7368]">
+                                <span>File #{file.id}</span>
+                                {file.is_featured && (
+                                  <span className="rounded-full bg-[#171511] px-3 py-1 text-[10px] tracking-[0.18em] text-[#fffdf8]">
+                                    Featured
                                   </span>
-                                ))}
-                              {file.page_count && (
-                                <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-3 py-1 text-xs font-medium text-[#5a5449]">
-                                  {file.page_count} pages
-                                </span>
-                              )}
+                                )}
+                                {file.download_password && (
+                                  <span className="flex items-center gap-1 rounded-full border border-[#5f6f52]/20 bg-[#eff4ea] px-3 py-1 text-[10px] tracking-[0.18em] text-[#5f6f52]">
+                                    <KeyRound className="size-3" />
+                                    Password protected
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1.5 truncate text-lg font-semibold text-[#171511] sm:text-xl">{file.title}</div>
+                              <div className="mt-1 line-clamp-2 text-sm text-[#5a5449]">{file.description || "No description added yet."}</div>
+                              <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+                                {[file.subject, file.course, file.semester, file.unit_label]
+                                  .filter(Boolean)
+                                  .map((item) => (
+                                    <span key={`${file.id}-${item}`} className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-2.5 py-0.5 text-xs font-medium text-[#5a5449]">
+                                      {item}
+                                    </span>
+                                  ))}
+                                {file.page_count && (
+                                  <span className="rounded-full border border-[#171511]/8 bg-[#f8f2e9] px-2.5 py-0.5 text-xs font-medium text-[#5a5449]">
+                                    {file.page_count} pages
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="rounded-full bg-[#f5ecdf] px-4 py-2 text-sm font-medium text-[#171511]">
-                            Rs. {Number(file.price).toFixed(2)}
+                          {/* ── Price + action buttons ── */}
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#171511]/6 pt-4">
+                            <div className="rounded-full bg-[#f5ecdf] px-4 py-1.5 text-sm font-medium text-[#171511]">
+                              Rs. {Number(file.price).toFixed(2)}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(file)}>
+                                <PencilLine className="mr-1.5 size-3.5" /> Edit
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(file.id)}>
+                                <Trash2 className="mr-1.5 size-3.5" /> Delete
+                              </Button>
+                            </div>
                           </div>
-
-                          <Button variant="ghost" onClick={() => handleEdit(file)}>
-                            <PencilLine className="mr-2 size-4" /> Edit
-                          </Button>
-                          <Button variant="ghost" onClick={() => handleDelete(file.id)}>
-                            <Trash2 className="mr-2 size-4" /> Delete
-                          </Button>
                         </div>
                       ))}
                     </div>

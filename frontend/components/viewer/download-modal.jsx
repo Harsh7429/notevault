@@ -117,11 +117,19 @@ export function DownloadModal({ fileId, fileName, onClose }) {
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal — bottom-sheet on mobile, centered card on sm+ */}
       <div
-        className="fixed inset-x-4 top-1/2 z-50 mx-auto max-w-md -translate-y-1/2 rounded-3xl shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md rounded-t-3xl shadow-2xl
+                   sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
         style={{ background: "#0d1117", border: "1px solid rgba(217,183,115,0.18)" }}
       >
+        {/* Safe-area spacer for iOS home bar (only shown at bottom on mobile) */}
+        <div className="sm:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }} />
+        {/* Drag handle hint — only visible on mobile where modal is a bottom sheet */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-white/20" />
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6">
           <div className="flex items-center gap-3">
@@ -260,6 +268,8 @@ export function DownloadModal({ fileId, fileName, onClose }) {
             </>
           )}
         </div>
+        {/* iOS safe-area bottom padding for bottom-sheet on iPhone */}
+        <div className="sm:hidden" style={{ height: "env(safe-area-inset-bottom, 12px)" }} />
       </div>
     </>
   );

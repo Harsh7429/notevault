@@ -162,10 +162,10 @@ export default function FileDetailPage({ fileId: fileIdProp }) {
         />
       </Head>
 
-      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
         <Link
           href="/browse"
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-[#5f584d] transition hover:text-[#171511]"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-[#5f584d] transition hover:text-[#171511] sm:mb-8"
         >
           <ArrowLeft className="size-4" />
           Back to catalogue
@@ -194,7 +194,7 @@ export default function FileDetailPage({ fileId: fileIdProp }) {
             {/* ── Left: details ── */}
             <div className="order-last flex flex-col gap-6 lg:order-first">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-[#171511]">
+                <h1 className="text-2xl font-bold tracking-tight text-[#171511] sm:text-3xl">
                   {file.title}
                 </h1>
                 {metaChips.length > 0 && (
@@ -236,54 +236,54 @@ export default function FileDetailPage({ fileId: fileIdProp }) {
               )}
 
               <Card>
-                <CardContent className="grid grid-cols-2 gap-y-3 p-5 text-sm">
+                <CardContent className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 p-5 text-sm">
                   {file.subject && (
                     <>
-                      <span className="font-medium text-[#7a7368]">Subject</span>
-                      <span className="text-[#171511]">{file.subject}</span>
+                      <span className="font-medium text-[#7a7368] whitespace-nowrap">Subject</span>
+                      <span className="min-w-0 break-words text-[#171511]">{file.subject}</span>
                     </>
                   )}
                   {file.course && (
                     <>
-                      <span className="font-medium text-[#7a7368]">Course</span>
-                      <span className="text-[#171511]">{file.course}</span>
+                      <span className="font-medium text-[#7a7368] whitespace-nowrap">Course</span>
+                      <span className="min-w-0 break-words text-[#171511]">{file.course}</span>
                     </>
                   )}
                   {file.semester && (
                     <>
-                      <span className="font-medium text-[#7a7368]">Semester</span>
-                      <span className="text-[#171511]">{file.semester}</span>
+                      <span className="font-medium text-[#7a7368] whitespace-nowrap">Semester</span>
+                      <span className="min-w-0 break-words text-[#171511]">{file.semester}</span>
                     </>
                   )}
                   {file.unit_label && (
                     <>
-                      <span className="font-medium text-[#7a7368]">Unit</span>
-                      <span className="text-[#171511]">{file.unit_label}</span>
+                      <span className="font-medium text-[#7a7368] whitespace-nowrap">Unit</span>
+                      <span className="min-w-0 break-words text-[#171511]">{file.unit_label}</span>
                     </>
                   )}
                   {file.page_count && (
                     <>
-                      <span className="font-medium text-[#7a7368]">Pages</span>
-                      <span className="text-[#171511]">{file.page_count}</span>
+                      <span className="font-medium text-[#7a7368] whitespace-nowrap">Pages</span>
+                      <span className="min-w-0 text-[#171511]">{file.page_count}</span>
                     </>
                   )}
-                  <span className="font-medium text-[#7a7368]">Added to catalog</span>
-                  <span className="text-[#171511]">
+                  <span className="font-medium text-[#7a7368] whitespace-nowrap">Added</span>
+                  <span className="min-w-0 text-[#171511]">
                     {new Date(file.created_at).toLocaleDateString("en-IN", {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
                     })}
                   </span>
-                  <span className="font-medium text-[#7a7368]">Product ID</span>
-                  <span className="text-[#171511]">#{file.id}</span>
+                  <span className="font-medium text-[#7a7368] whitespace-nowrap">Product ID</span>
+                  <span className="min-w-0 text-[#171511]">#{file.id}</span>
                 </CardContent>
               </Card>
             </div>
 
             {/* ── Right: purchase panel ── */}
             <div className="order-first flex flex-col gap-4 lg:order-last">
-              <Card className="lg:sticky lg:top-6">
+              <Card className="lg:sticky lg:top-20">
                 <CardContent className="flex flex-col gap-5 p-6">
                   <div className="flex items-baseline justify-between">
                     <span className="text-3xl font-bold text-[#171511]">

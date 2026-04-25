@@ -282,27 +282,32 @@ export default function ViewerPage() {
         {/* ── Watermark strip ── */}
         {user && (
           <div
-            className="mb-3 flex items-center justify-between rounded-xl px-3 py-2 sm:px-4"
+            className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl px-3 py-2 sm:px-4"
             style={{
               background: "rgba(217,183,115,0.05)",
               border: "1px solid rgba(217,183,115,0.1)",
             }}
           >
             <span
-              className="text-[10px] sm:text-xs"
+              className="min-w-0 text-[10px] sm:text-xs"
               style={{ color: "#4b5563" }}
             >
               Licensed to:{" "}
-              <span className="font-semibold" style={{ color: "#6b7280" }}>
+              <span className="font-semibold break-all" style={{ color: "#6b7280" }}>
                 {user.email}
               </span>
             </span>
             <span
-              className="text-[10px] sm:text-xs"
+              className="shrink-0 text-[10px] sm:text-xs"
               style={{ color: "#374151" }}
             >
               {new Date().toLocaleString("en-IN", {
                 timeZone: "Asia/Kolkata",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}{" "}
               IST
             </span>

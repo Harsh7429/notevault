@@ -43,14 +43,6 @@ export default function RegisterPage() {
       <Head><title>Register | NoteVault</title></Head>
       <AppShell>
         <section className="py-6 sm:py-10 lg:py-12">
-          {/* Mobile-only compact header */}
-          <div className="mb-5 text-center lg:hidden">
-            <h1 className="font-heading text-3xl text-[#171511] sm:text-4xl">Create account</h1>
-            <p className="mt-2 text-sm text-[#5a5449] sm:text-base">
-              Register once to buy and access premium notes securely.
-            </p>
-          </div>
-
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             {/* Left description — desktop only */}
             <div className="hidden space-y-6 lg:block">

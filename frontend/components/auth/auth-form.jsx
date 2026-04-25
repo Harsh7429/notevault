@@ -23,15 +23,15 @@ export function AuthForm({
   extraContent
 }) {
   return (
-    <Card className="mx-auto w-full max-w-xl rounded-[2.4rem]">
-      <CardContent className="space-y-7 p-8 sm:p-10">
-        <div className="space-y-4 text-center">
+    <Card className="mx-auto w-full max-w-xl rounded-[1.5rem] sm:rounded-[2.4rem]">
+      <CardContent className="space-y-6 p-6 sm:space-y-7 sm:p-8 lg:p-10">
+        <div className="space-y-3 text-center sm:space-y-4">
           {badge ? <div className="inline-flex rounded-full border border-[#171511]/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#6d675c]">{badge}</div> : null}
-          <h1 className="font-heading text-4xl font-semibold tracking-tight text-[#171511]">{title}</h1>
-          <p className="mx-auto max-w-lg text-[#5a5449]">{description}</p>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-[#171511] sm:text-4xl">{title}</h1>
+          <p className="mx-auto max-w-lg text-sm leading-6 text-[#5a5449] sm:text-base sm:leading-7">{description}</p>
         </div>
 
-        <form className="space-y-5" onSubmit={onSubmit}>
+        <form className="space-y-4 sm:space-y-5" onSubmit={onSubmit}>
           {fields.map((field) => (
             <label key={field.name} className="block space-y-2">
               <span className="text-sm font-medium text-[#3f3a31]">{field.label}</span>

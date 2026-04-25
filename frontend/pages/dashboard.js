@@ -327,13 +327,18 @@ export default function DashboardPage() {
       {/* ── Password modal ── */}
       {passwordModal && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-6 sm:items-center sm:pb-0"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
           onClick={() => setPasswordModal(null)}
         >
           <div
-            className="w-full max-w-sm rounded-3xl border border-[#171511]/10 bg-white p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-t-3xl border border-[#171511]/10 bg-white p-6 shadow-2xl sm:rounded-3xl"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 1.5rem))" }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Drag handle — mobile only */}
+            <div className="mb-4 flex justify-center sm:hidden">
+              <div className="h-1 w-10 rounded-full bg-[#171511]/15" />
+            </div>
             <h3 className="font-heading text-xl font-semibold text-[#171511]">Download Password</h3>
             <p className="mt-1 text-sm text-[#5a5449]">{passwordModal.title}</p>
 
